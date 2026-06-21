@@ -16,7 +16,6 @@ bir alternatif.
 [**Releases**](../../releases) sayfasından son sürümü indirin:
 
 - **`AetherWall-Setup-x.x.x.exe`** — Kurulum sihirbazı (önerilen). Başlat menüsü kısayolu, otomatik güncelleme.
-- **`AetherWall-Portable-x.x.x.exe`** — Kurulum gerektirmez, doğrudan çalıştırın.
 
 ### ⚠️ Windows SmartScreen Uyarısı Hakkında
 
@@ -69,7 +68,6 @@ npm run build:dir  # sadece klasör çıktısı (hızlı test için)
 ## 🤝 Katkıda Bulunma
 
 PR'lar açık. Büyük değişiklikler öncesi bir issue açıp tartışmanızı öneririz.
-Detaylar için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına bakın.
 
 ---
 
