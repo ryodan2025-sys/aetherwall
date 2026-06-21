@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; }
+  body { background:#000; overflow:hidden; width:100vw; height:100vh; }
+  canvas { display:block; }
+  #mode-btn {
+    position:fixed; bottom:20px; right:20px; z-index:99;
+    background:rgba(124,106,247,.3); border:1px solid rgba(124,106,247,.5);
+    color:#fff; padding:8px 16px; border-radius:20px; cursor:pointer;
+    font-family:-apple-system,sans-serif; font-size:12px; backdrop-filter:blur(4px);
+    transition:.2s;
+  }
+  #mode-btn:hover { background:rgba(124,106,247,.6); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="mode-btn">Mod Değiştir</button>
+
+<script>
+'use strict';
+
+const canvas  = document.getElementById('c');
+const ctx     = canvas.getContext('2d');
+let W = canvas.width  = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let analyser = null, dataArray = null;
+let audioReady = false;
+let demoT = 0; // demo modu için
+
+async function initAudio() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const ctx2   = new AudioContext();
+    analyser      = ctx2.createAnalyser();
+    analyser.fftSize = 256;
+    dataArray     = new Uint8Array(analyser.frequencyBinCount);
+    ctx2.createMediaStreamSource(stream).connect(analyser);
+    audioReady = true;
+  } catch {
+    // Demo mod: simüle edilmiş ses verisi
+    audioReady = false;
+  }
+}
+
+function getAudioData() {
+  if (audioReady && analyser) {
+    analyser.getByteFrequencyData(dataArray);
+    return dataArray;
+  }
+  // Demo: sahte ses dalgası
+  const fake = new Uint8Array(128);
+  demoT += 0.03;
+  for (let i = 0; i < 128; i++) {
+    fake[i] = Math.abs(
+      Math.sin(demoT + i * 0.15) * 100 +
+      Math.sin(demoT * 1.7 + i * 0.08) * 50 +
+      Math.random() * 20
+    );
+  }
+  return fake;
+}
+
+// ── Modlar ────────────────────────────────────────────────────────────────────
+const MODES = ['aurora', 'bars', 'pulse'];
+let modeIdx = 0;
+document.getElementById('mode-btn').onclick = () => {
+  modeIdx = (modeIdx + 1) % MODES.length;
+  document.getElementById('mode-btn').textContent = MODES[modeIdx].toUpperCase();
+};
+
+// ── Aurora çizici ─────────────────────────────────────────────────────────────
+let auroraT = 0;
+function drawAurora(data) {
+  auroraT += 0.008;
+  const bass  = (data[0]  + data[1]  + data[2])  / 3 / 255;
+  const mid   = (data[10] + data[15] + data[20]) / 3 / 255;
+  const high  = (data[40] + data[50] + data[60]) / 3 / 255;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Arka plan gradient
+  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.8);
+  bg.addColorStop(0, `rgba(${Math.floor(bass*60)},0,${Math.floor(40+mid*80)},1)`);
+  bg.addColorStop(1, 'rgba(0,0,8,1)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Aurora katmanları
+  const layers = [
+    { h: 0.3, amp: 80,  freq: 1.5, hue: 260, opacity: 0.6 },
+    { h: 0.4, amp: 120, freq: 2.3, hue: 200, opacity: 0.4 },
+    { h: 0.5, amp: 60,  freq: 0.8, hue: 300, opacity: 0.5 },
+  ];
+
+  layers.forEach((layer, li) => {
+    const reactAmp = layer.amp * (1 + bass * 2 + mid * 1.5);
+    const yBase    = H * layer.h;
+    const hue      = layer.hue + mid * 60 + auroraT * 10;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+
+    for (let x = 0; x <= W; x += 3) {
+      const t   = x / W;
+      const y   = yBase
+        + Math.sin(t * Math.PI * layer.freq * 2 + auroraT + li) * reactAmp
+        + Math.sin(t * Math.PI * layer.freq * 3 + auroraT * 1.3) * reactAmp * 0.5;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H); ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, yBase - reactAmp, 0, yBase + reactAmp);
+    grad.addColorStop(0, `hsla(${hue},100%,65%,${layer.opacity * (0.5 + bass)})`);
+    grad.addColorStop(0.5, `hsla(${hue+40},100%,55%,${layer.opacity * 0.3})`);
+    grad.addColorStop(1, `hsla(${hue},100%,40%,0)`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Yıldızlar
+  if (high > 0.3) {
+    for (let i = 0; i < 5; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H * 0.5;
+      ctx.save();
+      ctx.globalAlpha = Math.random() * high;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 1.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// ── Bars çizici ───────────────────────────────────────────────────────────────
+function drawBars(data) {
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  const bins    = data.length;
+  const barW    = W / bins;
+  const now     = Date.now();
+
+  for (let i = 0; i < bins; i++) {
+    const v    = data[i] / 255;
+    const h    = v * H * 0.85;
+    const hue  = (i / bins * 280 + now * 0.03) % 360;
+
+    // Alt çubuk
+    const grad = ctx.createLinearGradient(0, H, 0, H - h);
+    grad.addColorStop(0, `hsla(${hue},100%,30%,0.8)`);
+    grad.addColorStop(1, `hsla(${hue},100%,65%,1)`);
+
+    ctx.save();
+    ctx.shadowColor = `hsl(${hue},100%,60%)`;
+    ctx.shadowBlur  = 10;
+    ctx.fillStyle   = grad;
+    ctx.fillRect(i * barW, H - h, barW - 1, h);
+
+    // Üst yansıma
+    ctx.globalAlpha = 0.2;
+    ctx.scale(1, -1);
+    ctx.fillRect(i * barW, -H + h - 2, barW - 1, h * 0.3);
+    ctx.restore();
+  }
+}
+
+// ── Pulse çizici ──────────────────────────────────────────────────────────────
+let pulseRings = [];
+let lastBeat   = 0;
+
+function drawPulse(data) {
+  ctx.fillStyle = 'rgba(0,0,4,0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  const bass = (data[0]+data[1]+data[2]+data[3]) / 4 / 255;
+  const now  = Date.now();
+
+  // Beat tespit
+  if (bass > 0.6 && now - lastBeat > 200) {
+    lastBeat = now;
+    pulseRings.push({ r: 0, maxR: Math.min(W,H)*0.6, life: 1, hue: Math.random()*360, strength: bass });
+  }
+
+  // Merkez blob
+  const cx = W/2, cy = H/2;
+  const blobR = 60 + bass * 140;
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, blobR);
+  grad.addColorStop(0, `rgba(124,106,247,${0.3+bass*0.6})`);
+  grad.addColorStop(0.5, `rgba(60,30,180,${0.1+bass*0.3})`);
+  grad.addColorStop(1, 'transparent');
+  ctx.save();
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, blobR, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // Frekans çember grafiği
+  const bins = Math.min(data.length, 64);
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let i = 0; i < bins; i++) {
+    const angle = (i / bins) * Math.PI * 2 - Math.PI/2;
+    const v     = data[i] / 255;
+    const inner = 70 + v * 100;
+    const outer = inner + v * 80;
+    const hue   = (i/bins*360 + now*0.02) % 360;
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.strokeStyle = `hsl(${hue},100%,65%)`;
+    ctx.lineWidth   = 2;
+    ctx.shadowColor = `hsl(${hue},100%,60%)`;
+    ctx.shadowBlur  = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, -inner);
+    ctx.lineTo(0, -outer);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Pulse halkaları
+  pulseRings = pulseRings.filter(ring => ring.life > 0);
+  pulseRings.forEach(ring => {
+    ring.r    += ring.maxR * 0.03;
+    ring.life -= 0.025;
+    ctx.save();
+    ctx.globalAlpha = ring.life * ring.strength;
+    ctx.strokeStyle = `hsl(${ring.hue},100%,65%)`;
+    ctx.lineWidth   = 2;
+    ctx.shadowColor = `hsl(${ring.hue},100%,60%)`;
+    ctx.shadowBlur  = 12;
+    ctx.beginPath();
+    ctx.arc(cx, cy, ring.r, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+// ── Ana döngü ─────────────────────────────────────────────────────────────────
+function loop() {
+  requestAnimationFrame(loop);
+  const data = getAudioData();
+  const mode = MODES[modeIdx];
+  if      (mode === 'aurora') drawAurora(data);
+  else if (mode === 'bars')   drawBars(data);
+  else                        drawPulse(data);
+}
+
+window.addEventListener('resize', () => {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+});
+
+initAudio().then(() => loop());
+</script>
+</body>
+</html>

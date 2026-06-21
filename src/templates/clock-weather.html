@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { overflow:hidden; width:100vw; height:100vh; font-family:'Segoe UI',sans-serif; background:#0a0a1a; color:#fff; }
+  canvas#bg { position:fixed; inset:0; z-index:0; }
+
+  .ui { position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+
+  /* Saat */
+  .clock-wrap { text-align:center; margin-bottom:32px; }
+  .time { font-size:clamp(60px,12vw,140px); font-weight:200; letter-spacing:-2px; text-shadow:0 0 40px rgba(124,106,247,.5); line-height:1; }
+  .date { font-size:clamp(14px,2vw,22px); color:rgba(255,255,255,.5); margin-top:8px; letter-spacing:3px; text-transform:uppercase; }
+  .seconds-bar {
+    width:300px; height:2px; background:rgba(255,255,255,.1); border-radius:1px; margin:12px auto 0;
+    overflow:hidden;
+  }
+  .seconds-fill { height:100%; background:linear-gradient(90deg,#7c6af7,#a78bfa); border-radius:1px; transition:width .1s linear; }
+
+  /* Hava durumu */
+  .weather { display:flex; align-items:center; gap:24px; background:rgba(255,255,255,.05); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:20px 32px; }
+  .w-icon { font-size:52px; filter:drop-shadow(0 0 12px rgba(255,255,255,.3)); }
+  .w-info { }
+  .w-temp { font-size:36px; font-weight:300; }
+  .w-desc { font-size:13px; color:rgba(255,255,255,.5); text-transform:capitalize; margin-top:2px; }
+  .w-city { font-size:11px; color:rgba(255,255,255,.35); letter-spacing:2px; text-transform:uppercase; margin-top:4px; }
+
+  /* Widget'lar */
+  .widgets { position:fixed; bottom:32px; right:32px; z-index:10; display:flex; flex-direction:column; gap:10px; align-items:flex-end; pointer-events:none; }
+  .widget { background:rgba(0,0,0,.3); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 16px; font-size:12px; color:rgba(255,255,255,.6); }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="ui">
+  <div class="clock-wrap">
+    <div class="time" id="time">00:00</div>
+    <div class="date" id="date">Pazartesi, 1 Ocak</div>
+    <div class="seconds-bar"><div class="seconds-fill" id="sec-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="weather" id="weather" style="display:none">
+    <div class="w-icon" id="w-icon">🌤</div>
+    <div class="w-info">
+      <div class="w-temp" id="w-temp">--°C</div>
+      <div class="w-desc" id="w-desc">Hava durumu yükleniyor...</div>
+      <div class="w-city" id="w-city">Konum alınıyor...</div>
+    </div>
+  </div>
+</div>
+
+<div class="widgets">
+  <div class="widget" id="w-humidity" style="display:none">💧 Nem: <span id="humidity">--%</span></div>
+  <div class="widget" id="w-wind"     style="display:none">💨 Rüzgar: <span id="wind">-- km/h</span></div>
+</div>
+
+<script>
+'use strict';
+
+// ── Saat ─────────────────────────────────────────────────────────────────────
+const DAYS = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+function updateClock() {
+  const now = new Date();
+  const h   = String(now.getHours()).padStart(2,'0');
+  const m   = String(now.getMinutes()).padStart(2,'0');
+  const s   = now.getSeconds();
+
+  document.getElementById('time').textContent = `${h}:${m}`;
+  document.getElementById('date').textContent = `${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+  document.getElementById('sec-bar').style.width = (s / 59 * 100) + '%';
+}
+setInterval(updateClock, 500);
+updateClock();
+
+// ── Hava durumu ───────────────────────────────────────────────────────────────
+// OpenWeatherMap API key - kullanıcı buraya kendi key'ini girebilir
+// Demo için: https://openweathermap.org/api (ücretsiz)
+const OWM_KEY = window.WEATHER_API_KEY || '';
+
+const weatherIcons = {
+  '01d':'☀️','01n':'🌙','02d':'🌤','02n':'🌤','03d':'☁️','03n':'☁️',
+  '04d':'☁️','04n':'☁️','09d':'🌧','09n':'🌧','10d':'🌦','10n':'🌦',
+  '11d':'⛈','11n':'⛈','13d':'❄️','13n':'❄️','50d':'🌫','50n':'🌫'
+};
+
+let currentWeather = 'clear'; // 'clear','rain','snow','cloud','storm'
+
+async function fetchWeather(lat, lon) {
+  if (!OWM_KEY) {
+    // Demo verisi
+    document.getElementById('weather').style.display = 'flex';
+    document.getElementById('w-icon').textContent = '☀️';
+    document.getElementById('w-temp').textContent = '22°C';
+    document.getElementById('w-desc').textContent = 'Açık ve güneşli';
+    document.getElementById('w-city').textContent = 'Demo Modu';
+    return;
+  }
+  try {
+    const url  = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OWM_KEY}&units=metric&lang=tr`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    document.getElementById('weather').style.display = 'flex';
+    document.getElementById('w-icon').textContent = weatherIcons[data.weather[0].icon] || '🌤';
+    document.getElementById('w-temp').textContent = `${Math.round(data.main.temp)}°C`;
+    document.getElementById('w-desc').textContent = data.weather[0].description;
+    document.getElementById('w-city').textContent = data.name;
+    document.getElementById('humidity').textContent = data.main.humidity + '%';
+    document.getElementById('wind').textContent = Math.round(data.wind.speed * 3.6) + ' km/h';
+    document.getElementById('w-humidity').style.display = 'block';
+    document.getElementById('w-wind').style.display     = 'block';
+
+    const main = data.weather[0].main.toLowerCase();
+    if      (main.includes('rain') || main.includes('drizzle')) currentWeather = 'rain';
+    else if (main.includes('snow'))   currentWeather = 'snow';
+    else if (main.includes('thunder'))currentWeather = 'storm';
+    else if (main.includes('cloud'))  currentWeather = 'cloud';
+    else                              currentWeather = 'clear';
+  } catch(e) {
+    document.getElementById('weather').style.display = 'flex';
+    document.getElementById('w-desc').textContent = 'API key girin';
+  }
+}
+
+// Konum al
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+    ()  => fetchWeather(41.01, 28.97) // Fallback: İstanbul
+  );
+} else {
+  fetchWeather(41.01, 28.97);
+}
+setInterval(() => { navigator.geolocation.getCurrentPosition(p => fetchWeather(p.coords.latitude, p.coords.longitude)); }, 600000);
+
+// ── Animasyonlu Arka Plan ─────────────────────────────────────────────────────
+const canvas = document.getElementById('bg');
+const ctx    = canvas.getContext('2d');
+let W = canvas.width  = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+let t = 0;
+let mouseX = W/2, mouseY = H/2;
+
+// Parçacıklar (yağmur, kar, bulut vb.)
+let particles = [];
+
+class WeatherParticle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x  = Math.random() * W;
+    this.y  = -10;
+    this.vy = currentWeather === 'snow' ? 1 + Math.random() * 1.5 : 6 + Math.random() * 6;
+    this.vx = currentWeather === 'snow' ? (Math.random()-0.5) * 1 : (Math.random()-0.5) * 2;
+    this.r  = currentWeather === 'snow' ? 2 + Math.random() * 3 : 1;
+    this.len= currentWeather === 'rain' || currentWeather === 'storm' ? 12 + Math.random()*8 : 0;
+    this.alpha = 0.4 + Math.random() * 0.4;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.y > H + 20) this.reset();
+  }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    if (this.len > 0) {
+      // Yağmur damlası
+      ctx.strokeStyle = '#aac';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + this.vx*2, this.y + this.len);
+      ctx.stroke();
+    } else {
+      // Kar tanesi
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function getParticleCount() {
+  if (currentWeather === 'rain')  return 150;
+  if (currentWeather === 'storm') return 250;
+  if (currentWeather === 'snow')  return 80;
+  return 0;
+}
+
+function drawBackground() {
+  t += 0.005;
+  ctx.clearRect(0, 0, W, H);
+
+  // Renk paleti hava durumuna göre
+  const palettes = {
+    clear:  ['#0a0a2e','#1a1060','#0d2050'],
+    cloud:  ['#1a1a2a','#252535','#1a1a28'],
+    rain:   ['#0a0f1a','#0d1525','#0a1020'],
+    snow:   ['#0f1520','#1a2535','#101820'],
+    storm:  ['#05050f','#0d0a1a','#050510'],
+  };
+  const pal = palettes[currentWeather] || palettes.clear;
+
+  // Arka plan gradient
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, pal[0]);
+  grad.addColorStop(0.5, pal[1]);
+  grad.addColorStop(1, pal[2]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Nebula efekti (açık havada)
+  if (currentWeather === 'clear') {
+    for (let i = 0; i < 3; i++) {
+      const nx = W * (0.2 + i * 0.3) + Math.sin(t + i) * 80;
+      const ny = H * 0.4 + Math.cos(t * 0.7 + i) * 60;
+      const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, W * 0.25);
+      const hue = 220 + i * 40 + Math.sin(t) * 20;
+      ng.addColorStop(0, `hsla(${hue},80%,30%,0.08)`);
+      ng.addColorStop(1, 'transparent');
+      ctx.fillStyle = ng;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Yıldızlar
+    if (t < 0.1 || !canvas._stars) {
+      canvas._stars = Array.from({length:200}, () => ({
+        x: Math.random()*W, y: Math.random()*H,
+        r: Math.random()*1.5, alpha: Math.random()
+      }));
+    }
+    canvas._stars.forEach(s => {
+      ctx.save();
+      ctx.globalAlpha = s.alpha * (0.5 + Math.sin(t*3 + s.x)*0.3);
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // Şimşek (fırtınada)
+  if (currentWeather === 'storm' && Math.random() < 0.003) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(200,200,255,0.8)';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#aaf';
+    ctx.shadowBlur = 20;
+    let lx = Math.random() * W, ly = 0;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    for (let i = 0; i < 8; i++) {
+      lx += (Math.random()-0.5) * 60;
+      ly += H / 8;
+      ctx.lineTo(lx, ly);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Hava parçacıkları
+  const needed = getParticleCount();
+  while (particles.length < needed) particles.push(new WeatherParticle());
+  while (particles.length > needed) particles.pop();
+  particles.forEach(p => { p.update(); p.draw(); });
+
+  // Mouse ışıma efekti
+  const mg = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  mg.addColorStop(0, 'rgba(124,106,247,0.04)');
+  mg.addColorStop(1, 'transparent');
+  ctx.fillStyle = mg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  drawBackground();
+}
+
+window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+window.addEventListener('resize', () => {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  canvas._stars = null;
+});
+
+loop();
+</script>
+</body>
+</html>

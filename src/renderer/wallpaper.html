@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { margin:0; padding:0; }
+  html, body { width:100vw; height:100vh; overflow:hidden; background:#000; }
+  #video-player {
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; display:none;
+  }
+  #html-frame {
+    position:absolute; inset:0; width:100%; height:100%;
+    border:none; display:none;
+  }
+  #image-layer {
+    position:absolute; inset:0; width:100%; height:100%;
+    background-size:cover; background-position:center;
+    background-repeat:no-repeat; display:none;
+  }
+  /* Küçük örnekleme canvas'ı — görünmez */
+  #sample-cv { display:none; width:1px; height:1px; }
+</style>
+</head>
+<body>
+  <video  id="video-player" loop autoplay muted playsinline preload="auto" style="display:none"></video>
+  <iframe id="html-frame"   sandbox="allow-scripts allow-same-origin"></iframe>
+  <div    id="image-layer"></div>
+  <canvas id="sample-cv" width="32" height="18"></canvas>
+
+<script>
+'use strict';
+
+const vid    = document.getElementById('video-player');
+const frm    = document.getElementById('html-frame');
+const img    = document.getElementById('image-layer');
+const smpCv  = document.getElementById('sample-cv');
+const smpCtx = smpCv.getContext('2d', { willReadFrequently: true });
+
+let currentType = null;
+
+// ── Dominant renk — 32×18 küçük örnekleme, 1 kez ─────────────────────────
+function getDominantColor(source) {
+  try {
+    smpCtx.drawImage(source, 0, 0, 32, 18);
+    const d = smpCtx.getImageData(0, 0, 32, 18).data;
+    let r=0, g=0, b=0, n=0;
+    for (let i = 0; i < d.length; i += 4) {
+      const br = (d[i] + d[i+1] + d[i+2]) / 3;
+      if (br < 15 || br > 240) continue;
+      r += d[i]; g += d[i+1]; b += d[i+2]; n++;
+    }
+    if (!n) return null;
+    r = Math.round(r/n); g = Math.round(g/n); b = Math.round(b/n);
+    const mx = Math.max(r,g,b), f = mx > 0 ? Math.min(255/mx, 1.5) : 1;
+    return `rgb(${Math.min(255,r*f|0)},${Math.min(255,g*f|0)},${Math.min(255,b*f|0)})`;
+  } catch { return null; }
+}
+
+function sendColor(source) {
+  if (!window.aetherwall?.sendDominantColor) return;
+  setTimeout(() => {
+    const c = getDominantColor(source);
+    if (c) window.aetherwall.sendDominantColor(c);
+  }, 600);
+}
+
+// ── Wallpaper yükle ──────────────────────────────────────────────────────────
+function hideAll() {
+  vid.pause();
+  // src'yi temizle — önceki video belleği serbest bırakılsın
+  if (vid.src) { vid.src = ''; vid.load(); }
+  vid.style.display = 'none';
+  frm.src           = 'about:blank';
+  frm.style.display = 'none';
+  img.style.backgroundImage = 'none';
+  img.style.display = 'none';
+}
+
+window.loadWallpaper = function(src, type) {
+  hideAll();
+  currentType = type;
+
+  if (type === 'video') {
+    vid.src           = src;
+    vid.volume        = 0;
+    vid.playbackRate  = 1;
+    vid.style.display = 'block';
+    vid.load();
+    vid.play().catch(() => {});
+    vid.addEventListener('loadeddata', () => sendColor(vid), { once: true });
+
+  } else if (type === 'image') {
+    img.style.backgroundImage = `url("${src}")`;
+    img.style.display = 'block';
+    const tmp = new Image();
+    tmp.crossOrigin = 'anonymous';
+    tmp.onload = () => { sendColor(tmp); tmp.src = ''; }; // onload sonrası referansı bırak
+    tmp.src = src;
+
+  } else if (type === 'html' || type === 'template') {
+    frm.src           = src;
+    frm.style.display = 'block';
+  }
+};
+
+window.pauseWallpaper  = () => { if (currentType === 'video') vid.pause(); };
+window.resumeWallpaper = () => { if (currentType === 'video') vid.play().catch(() => {}); };
+
+window.applySettings = function(s) {
+  if (s.volume !== undefined && currentType === 'video') {
+    vid.volume = Math.max(0, Math.min(1, s.volume / 100));
+    vid.muted  = s.volume === 0;
+  }
+  if (s.playbackSpeed !== undefined && currentType === 'video') {
+    vid.playbackRate = Number(s.playbackSpeed) || 1;
+  }
+  // FPS limiti — video oynatma hızını kontrol et
+  if (s.fpsLimit && currentType === 'video') {
+    // HTML5 video native FPS limitini desteklemiyor ama playbackRate ile yaklaşık sağlanabilir
+    // Gerçek FPS limiti için requestAnimationFrame kullanılabilir, şimdilik skip
+  }
+};
+
+if (window.aetherwall) {
+  window.aetherwall.onWallpaperLoad?.(d => window.loadWallpaper(d.path, d.type));
+  window.aetherwall.onPause?.(window.pauseWallpaper);
+  window.aetherwall.onResume?.(window.resumeWallpaper);
+  window.aetherwall.signalReady?.();
+}
+
+// Test: ?src=...&type=...
+const p = new URLSearchParams(window.location.search);
+if (p.get('src') && p.get('type'))
+  window.loadWallpaper(decodeURIComponent(p.get('src')), p.get('type'));
+</script>
+</body>
+</html>

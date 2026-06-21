@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<title>AetherWall</title>
+<style>
+/* ═══════════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════════ */
+:root{
+  --accent:     #7c6af7;
+  --accent2:    #a78bfa;
+  --accent-glow:rgba(124,106,247,.3);
+  --accent-dim: rgba(124,106,247,.12);
+  --text0:#eeeef8; --text1:#8888aa; --text2:#50506a;
+  --green:#4cdd88; --red:#ff5566; --yellow:#f5a623;
+  --neon-sm:0 0 8px rgba(124,106,247,.8),0 0 20px rgba(124,106,247,.4);
+  --neon-md:0 0 12px rgba(124,106,247,.9),0 0 32px rgba(124,106,247,.5);
+  /* surface */
+  --bg:    #06060f;
+  --surf1: rgba(255,255,255,.038);
+  --surf2: rgba(255,255,255,.055);
+  --surf3: rgba(255,255,255,.075);
+  --border:rgba(255,255,255,.07);
+  --border2:rgba(255,255,255,.12);
+  /* sidebar */
+  --sb-w:60px;
+  --sb-w-open:210px;
+  --titlebar-h:42px;
+}
+body.light-theme{
+  --text0:#1a1a2e; --text1:#5555aa; --text2:#9090bb;
+  --bg:#f0f0fa;
+  --surf1:rgba(0,0,0,.04); --surf2:rgba(0,0,0,.065); --surf3:rgba(0,0,0,.09);
+  --border:rgba(0,0,0,.07); --border2:rgba(0,0,0,.13);
+  --accent-glow:rgba(91,77,232,.2);
+  --neon-sm:0 0 8px rgba(91,77,232,.5),0 0 20px rgba(91,77,232,.25);
+  --neon-md:0 0 12px rgba(91,77,232,.6),0 0 32px rgba(91,77,232,.3);
+}
+
+/* ═══════════════════════════════════════════════
+   RESET + BASE
+═══════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{
+  font-family:-apple-system,'Inter',system-ui,sans-serif;
+  font-size:13px; color:var(--text0);
+  background:var(--bg);
+  display:flex; flex-direction:column;
+  -webkit-font-smoothing:antialiased;
+  transition:background .25s,color .25s;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 55% at 20% 15%, rgba(124,106,247,.09) 0%,transparent 60%),
+    radial-gradient(ellipse 55% 65% at 80% 85%, rgba(80,50,220,.07) 0%,transparent 60%),
+    radial-gradient(ellipse 45% 35% at 60% 40%, rgba(100,70,255,.04) 0%,transparent 55%);
+}
+body.light-theme::before{
+  background:
+    radial-gradient(ellipse 70% 55% at 20% 15%, rgba(91,77,232,.07) 0%,transparent 60%),
+    radial-gradient(ellipse 55% 65% at 80% 85%, rgba(60,40,190,.05) 0%,transparent 60%);
+}
+button{background:none;border:none;cursor:pointer;font-family:inherit;color:inherit;}
+input,select{font-family:inherit;color:inherit;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px;}
+body.light-theme ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);}
+
+/* ═══════════════════════════════════════════════
+   TITLEBAR
+═══════════════════════════════════════════════ */
+.titlebar{
+  height:var(--titlebar-h);
+  display:flex;align-items:center;gap:10px;
+  padding:0 16px 0 14px;
+  -webkit-app-region:drag;
+  position:relative;z-index:100;
+  background:rgba(255,255,255,.022);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.tb-logo{
+  font-size:10.5px;font-weight:800;letter-spacing:.22em;
+  color:var(--accent2);-webkit-app-region:no-drag;
+  user-select:none;
+}
+.tb-status{
+  display:flex;align-items:center;gap:5px;
+  font-size:10.5px;color:var(--text2);
+}
+.tb-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--text2);flex-shrink:0;
+  transition:background .3s;
+}
+.tb-dot.on{background:var(--green);box-shadow:0 0 6px var(--green);}
+.tb-dot.pause{background:var(--yellow);}
+.tb-spacer{flex:1;}
+/* tema toggle */
+.tb-theme{
+  -webkit-app-region:no-drag;
+  width:30px;height:30px;border-radius:50%;
+  background:var(--surf2);border:1px solid var(--border2);
+  font-size:15px;display:flex;align-items:center;justify-content:center;
+  transition:background .18s,transform .18s,box-shadow .18s;
+  flex-shrink:0;
+}
+.tb-theme:hover{background:var(--surf3);transform:rotate(18deg) scale(1.1);box-shadow:0 3px 12px rgba(0,0,0,.3);}
+/* pencere butonları */
+.wbtns{display:flex;gap:4px;-webkit-app-region:no-drag;}
+.wbtn{
+  width:28px;height:28px;border-radius:8px;font-size:12px;
+  color:var(--text2);display:flex;align-items:center;justify-content:center;
+  transition:background .14s,color .14s;
+}
+.wbtn:hover{background:var(--surf3);color:var(--text0);}
+.wbtn.cls:hover{background:rgba(255,60,60,.2);color:var(--red);}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+.layout{
+  display:flex;flex:1;overflow:hidden;position:relative;z-index:1;
+  min-height:0;
+}
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR — dar, hover'da açılır
+═══════════════════════════════════════════════ */
+.sidebar{
+  width:var(--sb-w);
+  flex-shrink:0;
+  display:flex;flex-direction:column;
+  background:rgba(255,255,255,.025);
+  border-right:1px solid var(--border);
+  overflow:hidden;
+  transition:width .22s cubic-bezier(.4,0,.2,1);
+  z-index:50;
+}
+.sidebar:hover{ width:var(--sb-w-open); }
+
+/* logo alanı */
+.sb-brand{
+  height:52px;display:flex;align-items:center;
+  padding:0 18px;gap:10px;flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+.sb-brand-icon{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+  box-shadow:0 2px 12px var(--accent-glow);
+}
+.sb-brand-name{
+  font-size:11px;font-weight:800;letter-spacing:.18em;
+  color:var(--accent2);white-space:nowrap;opacity:0;
+  transition:opacity .15s .05s;
+}
+.sidebar:hover .sb-brand-name{ opacity:1; }
+
+/* nav */
+.sb-nav{ flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px; }
+.sb-sec{
+  font-size:9px;font-weight:700;letter-spacing:.12em;
+  color:var(--text2);padding:8px 10px 4px;
+  white-space:nowrap;overflow:hidden;
+  opacity:0;transition:opacity .12s;
+}
+.sidebar:hover .sb-sec{ opacity:1; }
+.sb-item{
+  display:flex;align-items:center;gap:12px;
+  padding:9px 10px;border-radius:10px;
+  cursor:pointer;white-space:nowrap;overflow:hidden;
+  color:var(--text1);
+  transition:background .14s,color .14s;
+  position:relative;
+}
+.sb-item:hover{ background:var(--surf2);color:var(--text0); }
+.sb-item.active{
+  background:var(--accent-dim);color:var(--accent2);
+  box-shadow:inset 2px 0 0 var(--accent);
+}
+.sb-ico{
+  width:36px;height:36px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;flex-shrink:0;
+  background:var(--surf1);
+  transition:background .14s;
+}
+.sb-item.active .sb-ico{ background:var(--accent-dim); }
+.sb-item:hover .sb-ico{ background:var(--surf2); }
+.sb-lbl{
+  font-size:12px;font-weight:500;
+  opacity:0;transition:opacity .1s;
+}
+.sidebar:hover .sb-lbl{ opacity:1; }
+/* aktif çizgi */
+.sb-item.active::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;border-radius:0 3px 3px 0;
+  background:var(--accent);
+}
+
+/* ═══════════════════════════════════════════════
+   CONTENT
+═══════════════════════════════════════════════ */
+.content{
+  flex:1;display:flex;flex-direction:column;
+  overflow:hidden;position:relative;
+  min-height:0;
+}
+
+/* ═══════════════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════════════ */
+.page-header{
+  padding:20px 24px 0;flex-shrink:0;
+}
+.page-title{
+  font-size:20px;font-weight:700;color:var(--text0);
+  letter-spacing:-.02em;line-height:1;
+}
+.page-sub{
+  font-size:12px;color:var(--text2);margin-top:4px;
+}
+
+/* ═══════════════════════════════════════════════
+   DASHBOARD — Ana sayfa
+═══════════════════════════════════════════════ */
+#view-dashboard{
+  display:flex;flex-direction:column;flex:1;overflow:hidden;
+}
+.dash-body{
+  flex:1;overflow-y:auto;padding:16px 24px 24px;
+  display:flex;flex-direction:column;gap:16px;
+}
+
+/* İstatistik kartları satırı */
+.stat-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+.stat-card{
+  background:var(--surf1);
+  border:1px solid var(--border);
+  border-radius:14px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:6px;
+  position:relative;overflow:hidden;
+  transition:background .15s,border-color .15s;
+}
+.stat-card:hover{background:var(--surf2);border-color:var(--border2);}
+.stat-card::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 60%);
+}
+.stat-ico{font-size:18px;line-height:1;}
+.stat-val{font-size:22px;font-weight:700;color:var(--text0);line-height:1;}
+.stat-lbl{font-size:10.5px;color:var(--text2);font-weight:500;}
+.stat-badge{
+  position:absolute;top:12px;right:12px;
+  padding:2px 7px;border-radius:20px;font-size:9.5px;font-weight:700;
+}
+.stat-badge.on{background:rgba(76,221,136,.15);color:var(--green);}
+.stat-badge.off{background:rgba(255,85,102,.12);color:var(--red);}
+
+/* Aktif wallpaper büyük önizleme */
+.active-preview-wrap{
+  display:grid;grid-template-columns:1.4fr 1fr;
+  gap:12px;
+}
+.active-preview-card{
+  border-radius:16px;overflow:hidden;
+  border:1px solid var(--border);
+  background:var(--surf1);
+  position:relative;min-height:180px;
+}
+.active-preview-img{
+  position:absolute;inset:0;
+  background:#000;overflow:hidden;
+}
+.active-preview-img canvas{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+}
+.active-preview-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,12,.85) 0%,transparent 55%);
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:14px 16px;
+}
+.active-wp-name{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px;}
+.active-wp-meta{font-size:11px;color:rgba(255,255,255,.5);}
+.active-wp-badge{
+  position:absolute;top:12px;left:12px;
+  padding:3px 10px;border-radius:20px;font-size:9.5px;font-weight:800;
+  background:rgba(76,221,136,.2);border:1px solid rgba(76,221,136,.4);
+  color:var(--green);letter-spacing:.05em;
+}
+
+/* Hızlı eylemler */
+.quick-actions{
+  background:var(--surf1);border:1px solid var(--border);
+  border-radius:16px;padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.qa-title{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.08em;margin-bottom:4px;}
+.qa-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:10px;
+  background:var(--surf2);border:1px solid var(--border);
+  font-size:12px;font-weight:500;color:var(--text1);
+  transition:background .14s,color .14s,border-color .14s;
+  text-align:left;
+}
+.qa-btn:hover{background:var(--surf3);color:var(--text0);border-color:var(--border2);}
+.qa-ico{font-size:16px;width:28px;text-align:center;}
+
+/* Son eklenenler satırı */
+.recent-section{}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.section-title{font-size:13px;font-weight:700;color:var(--text0);}
+.section-link{
+  font-size:11px;color:var(--accent2);cursor:pointer;
+  padding:3px 8px;border-radius:6px;
+  transition:background .12s;
+}
+.section-link:hover{background:var(--accent-dim);}
+.recent-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.recent-card{
+  border-radius:12px;overflow:hidden;
+  border:1px solid var(--border);
+  background:var(--surf1);
+  position:relative;aspect-ratio:16/9;
+  cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+}
+.recent-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);border-color:var(--border2);}
+.recent-card canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.recent-card-name{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:16px 8px 6px;
+  background:linear-gradient(transparent,rgba(0,0,12,.8));
+  font-size:10px;font-weight:600;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* ═══════════════════════════════════════════════
+   KÜTÜPHANe
+═══════════════════════════════════════════════ */
+#view-library{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+
+.toolbar{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 24px;flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+.chips{display:flex;gap:5px;margin-left:auto;}
+.chip{
+  padding:5px 13px;border-radius:20px;font-size:11px;font-weight:600;
+  color:var(--text2);border:1px solid var(--border);
+  background:var(--surf1);cursor:pointer;
+  transition:background .13s,color .13s,border-color .13s;
+}
+.chip:hover{background:var(--surf2);color:var(--text1);}
+.chip.active{background:var(--accent-dim);color:var(--accent2);border-color:rgba(124,106,247,.35);}
+
+.gallery-wrap{flex:1;overflow:hidden;position:relative;}
+.gallery-scroll{
+  height:100%;overflow-y:auto;overflow-x:hidden;
+  padding:16px 24px 24px;
+  display:flex;flex-direction:column;gap:24px;
+}
+
+/* Boş durum */
+.empty-shelf{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;pointer-events:none;height:100%;
+}
+.empty-shelf .ei{font-size:52px;opacity:.15;}
+.empty-shelf .et{font-size:16px;font-weight:700;color:var(--text0);}
+.empty-shelf .es{font-size:11.5px;color:var(--text2);line-height:2;text-align:center;}
+
+/* Grup */
+.shelf-group{}
+.shelf-group-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.shelf-group-title{font-size:13px;font-weight:700;color:var(--text0);}
+.shelf-group-count{
+  font-size:10px;color:var(--text2);
+  background:var(--surf2);border:1px solid var(--border);
+  padding:2px 9px;border-radius:20px;
+}
+.shelf-group-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  grid-auto-rows:130px;gap:8px;
+}
+
+/* Kart */
+.s-card{
+  border-radius:13px;overflow:hidden;cursor:pointer;
+  background:var(--surf1);border:1px solid var(--border);
+  position:relative;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+  isolation:isolate;
+}
+.s-card:hover{
+  transform:translateY(-2px) scale(1.015);
+  box-shadow:0 8px 24px rgba(0,0,0,.45);
+  border-color:var(--border2);
+}
+.s-card:hover .s-overlay{opacity:1;}
+.s-card.active-card{
+  border-color:rgba(124,106,247,.6);
+  box-shadow:
+    0 0 0 1px rgba(124,106,247,.35),
+    var(--neon-sm),
+    0 4px 18px rgba(0,0,0,.4);
+}
+.s-card.active-card .s-overlay{opacity:1;}
+.s-thumb{position:absolute;inset:0;background:#06060f;overflow:hidden;}
+.s-thumb canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.s-overlay{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(to top,rgba(0,0,12,.88) 0%,rgba(0,0,12,.3) 50%,transparent 100%);
+  opacity:0;transition:opacity .16s;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:7px 9px;
+}
+.s-name{
+  font-size:10.5px;font-weight:700;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-shadow:0 1px 4px rgba(0,0,0,.9);
+}
+.s-meta{font-size:9px;color:rgba(255,255,255,.45);margin-top:1px;}
+.s-badge{
+  position:absolute;top:7px;left:7px;z-index:3;
+  padding:2px 7px;border-radius:20px;
+  font-size:8px;font-weight:800;letter-spacing:.05em;
+  backdrop-filter:blur(10px);pointer-events:none;
+  border:1px solid rgba(255,255,255,.12);
+}
+.bv{background:rgba(30,55,200,.85);color:#a0b8ff;}
+.bi{background:rgba(130,80,10,.88);color:#ffd07a;}
+.bh{background:rgba(10,110,60,.88);color:#7affc4;}
+.bs{background:rgba(110,25,190,.88);color:#d4a0ff;}
+.s-active-badge{
+  position:absolute;top:7px;right:7px;z-index:3;
+  padding:2px 8px;border-radius:20px;
+  font-size:8px;font-weight:800;letter-spacing:.04em;
+  background:rgba(0,0,0,.5);border:1px solid rgba(76,221,136,.45);
+  color:var(--green);backdrop-filter:blur(8px);
+  pointer-events:none;display:none;
+}
+.s-active-badge::before{content:'✓  ';}
+.s-card.active-card .s-active-badge{display:block;}
+
+/* ═══════════════════════════════════════════════
+   PANEL (Ayarlar / Oyun Algılama)
+═══════════════════════════════════════════════ */
+.panel{
+  display:flex;flex-direction:column;
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:20px 24px 32px;
+  gap:12px;
+  min-height:0;
+}
+.csec{
+  background:var(--surf1);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;
+  flex-shrink:0;
+}
+.csec-t{
+  font-size:9.5px;font-weight:700;letter-spacing:.12em;
+  color:var(--text2);padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.018);
+}
+.srow{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 16px;border-bottom:1px solid var(--border);
+  gap:16px;min-height:0;
+}
+.srow:last-child{border-bottom:none;}
+.lbl{font-size:12.5px;font-weight:600;color:var(--text0);line-height:1.3;}
+.sub{font-size:10.5px;color:var(--text2);margin-top:2px;line-height:1.4;}
+.srow > div:first-child{flex:1;min-width:0;}
+.tog{
+  width:40px;height:22px;border-radius:11px;
+  background:rgba(255,255,255,.1);border:1px solid var(--border2);
+  position:relative;cursor:pointer;flex-shrink:0;
+  transition:background .2s,border-color .2s;
+}
+.tog::after{
+  content:'';position:absolute;
+  width:16px;height:16px;border-radius:50%;
+  background:#fff;top:2px;left:2px;
+  transition:transform .2s,box-shadow .2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.tog.on{background:var(--accent);border-color:var(--accent);}
+.tog.on::after{transform:translateX(18px);box-shadow:0 1px 6px var(--accent-glow);}
+
+/* select + input */
+select,.tinput{
+  background:var(--surf2);border:1px solid var(--border2);
+  border-radius:8px;padding:6px 10px;font-size:12px;
+  color:var(--text0);outline:none;
+  transition:border-color .14s;
+}
+select:focus,.tinput:focus{border-color:rgba(124,106,247,.5);}
+input[type=range]{
+  width:140px;height:4px;border-radius:2px;
+  background:var(--surf3);outline:none;
+  accent-color:var(--accent);cursor:pointer;
+}
+
+/* buttons */
+.btn{
+  padding:7px 14px;border-radius:9px;font-size:12px;font-weight:600;
+  border:1px solid var(--border2);background:var(--surf2);
+  color:var(--text1);cursor:pointer;
+  transition:background .13s,color .13s,border-color .13s;
+  display:inline-flex;align-items:center;gap:5px;
+  white-space:nowrap;
+}
+.btn:hover{background:var(--surf3);color:var(--text0);}
+.btn-primary{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2);}
+.btn-ghost{background:transparent;}
+
+/* ═══════════════════════════════════════════════
+   MONITOR
+═══════════════════════════════════════════════ */
+.monitor-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;border-bottom:1px solid var(--border);
+}
+.monitor-row:last-child{border-bottom:none;}
+.monitor-name{font-size:12px;font-weight:600;color:var(--text0);}
+.monitor-size{font-size:10px;color:var(--text2);margin-top:1px;}
+.monitor-controls{display:flex;align-items:center;gap:6px;}
+.monitor-wp-name{font-size:10.5px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  width:480px;border-radius:20px;overflow:hidden;
+  background:linear-gradient(145deg,rgba(18,14,35,.97),rgba(8,8,20,.97));
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 24px 64px rgba(0,0,0,.7);
+  position:relative;
+  transform:scale(.94);transition:transform .2s;
+}
+.modal-overlay.open .modal{transform:scale(1);}
+.modal-close{
+  position:absolute;top:12px;right:12px;z-index:10;
+  width:28px;height:28px;border-radius:50%;font-size:13px;
+  background:rgba(255,255,255,.08);color:var(--text1);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .13s,color .13s;
+}
+.modal-close:hover{background:rgba(255,60,60,.2);color:var(--red);}
+.modal-preview{
+  aspect-ratio:16/9;background:#000;position:relative;overflow:hidden;
+}
+.modal-preview canvas,.modal-preview video{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+}
+.play-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:36px;color:rgba(255,255,255,.8);pointer-events:none;opacity:0;
+}
+.modal-body{padding:16px 18px 18px;}
+.modal-title{font-size:16px;font-weight:700;color:var(--text0);margin-bottom:4px;}
+.modal-meta{display:flex;gap:8px;font-size:11px;color:var(--text2);margin-bottom:14px;}
+.modal-acts{display:flex;gap:8px;}
+.m-btn{
+  flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:700;
+  border:1px solid var(--border2);cursor:pointer;
+  transition:background .14s,border-color .14s;
+}
+.m-apply{background:var(--accent);border-color:var(--accent);color:#fff;}
+.m-apply:hover{background:var(--accent2);}
+.m-del{background:rgba(255,85,102,.1);border-color:rgba(255,85,102,.25);color:var(--red);}
+.m-del:hover{background:rgba(255,85,102,.2);}
+
+/* ═══════════════════════════════════════════════
+   DRAG OVER
+═══════════════════════════════════════════════ */
+.drag-over::after{
+  content:'Buraya Bırak';
+  position:absolute;inset:0;z-index:20;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;color:var(--accent2);
+  background:rgba(124,106,247,.08);
+  border:2px dashed rgba(124,106,247,.4);
+  border-radius:16px;pointer-events:none;
+}
+
+/* ═══════════════════════════════════════════════
+   GAME LIST
+═══════════════════════════════════════════════ */
+.game-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:20px;font-size:11px;
+  background:var(--surf2);border:1px solid var(--border2);
+  color:var(--text1);margin:3px;cursor:pointer;
+  transition:background .12s;
+}
+.game-tag:hover{background:rgba(255,85,102,.1);border-color:rgba(255,85,102,.25);color:var(--red);}
+
+/* ═══════════════════════════════════════════════
+   PALETTE (CSS kaldı sadece renk degil)
+═══════════════════════════════════════════════ */
+.palette-grid{display:none;}
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div class="titlebar">
+  <span class="tb-logo">AETHERWALL</span>
+  <div class="tb-status">
+    <span class="tb-dot" id="s-dot"></span>
+    <span id="s-text">...</span>
+  </div>
+  <div class="tb-spacer"></div>
+  <button class="tb-theme" id="theme-toggle-btn" onclick="toggleTheme()" title="Tema değiştir">
+    <span id="theme-icon">☀</span>
+  </button>
+  <div class="wbtns">
+    <button class="wbtn" onclick="window.aetherwall?.minimizeUI()">─</button>
+    <button class="wbtn" onclick="window.aetherwall?.maximizeUI()">□</button>
+    <button class="wbtn cls" onclick="window.aetherwall?.closeUI()">✕</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">🌌</div>
+      <span class="sb-brand-name">AETHERWALL</span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-sec">ANA</div>
+      <div class="sb-item active" id="nav-dashboard" onclick="goTo('dashboard')">
+        <div class="sb-ico">⊞</div>
+        <span class="sb-lbl">Dashboard</span>
+      </div>
+      <div class="sb-item" id="nav-library" onclick="goTo('library')">
+        <div class="sb-ico">🖼</div>
+        <span class="sb-lbl">Kütüphane</span>
+      </div>
+      <div class="sb-sec">SİSTEM</div>
+      <div class="sb-item" id="nav-gamedetect" onclick="goTo('gamedetect')">
+        <div class="sb-ico">🎮</div>
+        <span class="sb-lbl">Oyun Algılama</span>
+      </div>
+      <div class="sb-item" id="nav-settings" onclick="goTo('settings')">
+        <div class="sb-ico">⚙</div>
+        <span class="sb-lbl">Ayarlar</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Hoş geldin — kütüphanen ve durumun</div>
+      </div>
+      <div class="dash-body">
+
+        <!-- İstatistik kartları -->
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-ico">🖼</div>
+            <div class="stat-val" id="stat-total">0</div>
+            <div class="stat-lbl">Toplam Wallpaper</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-ico">▶</div>
+            <div class="stat-val" id="stat-active-type">—</div>
+            <div class="stat-lbl">Aktif Tür</div>
+            <span class="stat-badge on" id="stat-status-badge">Aktif</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-ico">🎮</div>
+            <div class="stat-val" id="stat-game">Kapalı</div>
+            <div class="stat-lbl">Oyun Algılama</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-ico">🖥</div>
+            <div class="stat-val" id="stat-monitors">1</div>
+            <div class="stat-lbl">Monitör</div>
+          </div>
+        </div>
+
+        <!-- Aktif wallpaper + hızlı eylemler -->
+        <div class="active-preview-wrap">
+          <div class="active-preview-card">
+            <div class="active-preview-img">
+              <canvas id="dash-preview-canvas"></canvas>
+            </div>
+            <div class="active-preview-overlay">
+              <div class="active-wp-name" id="dash-wp-name">Wallpaper Seçilmedi</div>
+              <div class="active-wp-meta" id="dash-wp-meta">—</div>
+            </div>
+            <div class="active-wp-badge">● AKTİF</div>
+          </div>
+          <div class="quick-actions">
+            <div class="qa-title">HIZLI İŞLEMLER</div>
+            <button class="qa-btn" onclick="addWallpaper()">
+              <span class="qa-ico">＋</span> Wallpaper Ekle
+            </button>
+            <button class="qa-btn" id="qa-pause" onclick="togglePause()">
+              <span class="qa-ico" id="qa-pause-ico">⏸</span>
+              <span id="qa-pause-lbl">Duraklat</span>
+            </button>
+            <button class="qa-btn" onclick="goTo('library')">
+              <span class="qa-ico">🗂</span> Kütüphaneye Git
+            </button>
+            <button class="qa-btn" onclick="goTo('settings')">
+              <span class="qa-ico">⚙</span> Ayarlar
+            </button>
+          </div>
+        </div>
+
+        <!-- Son eklenenler -->
+        <div class="recent-section">
+          <div class="section-header">
+            <span class="section-title">Son Eklenenler</span>
+            <span class="section-link" onclick="goTo('library')">Tümünü gör →</span>
+          </div>
+          <div class="recent-grid" id="recent-grid">
+            <!-- JS doldurur -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- KÜTÜPHANe -->
+    <div id="view-library" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="addWallpaper()">＋ Wallpaper Ekle</button>
+        <button class="btn btn-ghost" id="pause-btn" onclick="togglePause()">⏸ <span id="pause-lbl">Duraklat</span></button>
+        <span id="lib-count" style="font-size:10.5px;color:var(--text2);"></span>
+        <div class="chips">
+          <button class="chip active" onclick="setFilter('all',this)">Tümü</button>
+          <button class="chip" onclick="setFilter('video',this)">Video</button>
+          <button class="chip" onclick="setFilter('image',this)">Görsel</button>
+          <button class="chip" onclick="setFilter('html',this)">HTML</button>
+        </div>
+      </div>
+      <div class="gallery-wrap" id="shelf-wrap"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="empty-shelf" id="empty-msg" style="display:none">
+          <div class="ei">🌌</div>
+          <div class="et">Henüz wallpaper yok</div>
+          <div class="es">＋ Wallpaper Ekle butonuna tıkla<br>veya dosyaları buraya sürükle & bırak</div>
+        </div>
+        <div class="gallery-scroll" id="gallery-scroll" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- OYUN ALGILAMA -->
+    <div id="view-gamedetect" class="panel" style="display:none;flex:1;min-height:0;">
+      <div class="page-title">Oyun Algılama</div>
+      <div class="page-sub" style="margin-bottom:8px">Oyun veya tam ekran uygulama açılınca wallpaper otomatik duraklatılır.</div>
+      <div class="csec">
+        <div class="csec-t">Ayarlar</div>
+        <div class="srow">
+          <div><div class="lbl">Oyun/Tam Ekran Algılama</div><div class="sub">Bannerlord, RDR2 dahil tüm tam ekran uygulamalar</div></div>
+          <button class="tog" id="tog-game" onclick="toggleS('pauseOnFullscreen','tog-game')"></button>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">Özel Process Ekle</div>
+        <div style="padding:12px 16px">
+          <div style="display:flex;gap:7px;margin-bottom:10px">
+            <input class="tinput" id="game-inp" placeholder="örn: mygame.exe" style="flex:1"/>
+            <button class="btn btn-primary" onclick="addGame()">Ekle</button>
+          </div>
+          <div id="game-list"></div>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">Dahili Liste (Otomatik)</div>
+        <div style="padding:12px 16px;font-size:11.5px;color:var(--text2);line-height:2">
+          CS2 · Valorant · Apex · Fortnite · PUBG · Bannerlord · GTA V · RDR2 · Cyberpunk 2077 · Elden Ring · Minecraft · Overwatch · ve 30+ daha...
+        </div>
+      </div>
+    </div>
+
+    <!-- AYARLAR -->
+    <div id="view-settings" class="panel" style="display:none;flex:1;min-height:0;">
+      <div class="page-title">Ayarlar</div>
+      <div class="page-sub" style="margin-bottom:8px">Performans ve sistem tercihleri</div>
+      <div class="csec">
+        <div class="csec-t">Dil / Language</div>
+        <div class="srow">
+          <div><div class="lbl">Uygulama Dili</div><div class="sub">Arayüz dilini değiştir</div></div>
+          <select id="lang-sel" onchange="changeLang(this.value)">
+            <option value="tr">🇹🇷 Türkçe</option>
+            <option value="en">🇬🇧 English</option>
+          </select>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">Performans</div>
+        <div class="srow">
+          <div><div class="lbl">FPS Limiti</div><div class="sub">Düşük = daha az CPU/GPU</div></div>
+          <select id="fps-sel" onchange="saveS('fpsLimit',this.value)">
+            <option value="15">15 FPS</option><option value="30">30 FPS</option>
+            <option value="60" selected>60 FPS</option>
+            <option value="unlimited">Limitsiz</option>
+          </select>
+        </div>
+        <div class="srow">
+          <div><div class="lbl">Bataryada Duraklat</div><div class="sub">Pil modunda performans koru</div></div>
+          <button class="tog" id="tog-bat" onclick="toggleS('pauseOnBattery','tog-bat')"></button>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">Video</div>
+        <div class="srow">
+          <div><div class="lbl">Ses Seviyesi</div></div>
+          <input type="range" id="vol-r" min="0" max="100" value="0" oninput="onVol(this.value)"/>
+          <span id="vol-lbl" style="font-size:11px;color:var(--text2);width:28px;text-align:right">0%</span>
+        </div>
+        <div class="srow">
+          <div><div class="lbl">Oynatma Hızı</div></div>
+          <select id="spd-sel" onchange="saveS('playbackSpeed',parseFloat(this.value))">
+            <option value="0.5">0.5×</option><option value="1.0" selected>1.0×</option>
+            <option value="1.5">1.5×</option><option value="2.0">2.0×</option>
+          </select>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">Sistem</div>
+        <div class="srow">
+          <div><div class="lbl">Windows ile Başlat</div><div class="sub">Oturum açılınca otomatik çalıştır</div></div>
+          <button class="tog" id="tog-start" onclick="toggleStartup()"></button>
+        </div>
+        <div class="srow">
+          <div><div class="lbl">Tray'e Küçült</div><div class="sub">Kapatınca arka planda çalışmaya devam et</div></div>
+          <button class="tog on" id="tog-tray" onclick="toggleS('minimizeToTray','tog-tray')"></button>
+        </div>
+        <div class="srow">
+          <div><div class="lbl">Windows Renk Uyumu</div><div class="sub">Taskbar rengini wallpaper'a göre değiştir</div></div>
+          <button class="tog" id="tog-accent" onclick="toggleAccent()"></button>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">Güncelleme</div>
+        <div class="srow">
+          <div><div class="lbl">Sürüm</div><div class="sub" id="app-version">—</div></div>
+          <button class="btn btn-ghost" onclick="checkUpdate()" style="font-size:11px">🔄 Güncelle</button>
+        </div>
+      </div>
+      <div class="csec">
+        <div class="csec-t">🖥 Çoklu Monitör</div>
+        <div class="srow">
+          <div><div class="lbl">Çoklu Monitör Desteği</div><div class="sub">Her monitöre ayrı wallpaper ata</div></div>
+          <button class="tog" id="tog-multimon" onclick="toggleMultiMonitor()"></button>
+        </div>
+        <div id="monitor-list" style="padding:0 16px 12px;flex-direction:column;gap:6px;display:none;"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /layout -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <div class="modal-preview" id="modal-preview">
+      <canvas id="modal-canvas"></canvas>
+      <video id="modal-video" loop muted playsinline></video>
+      <div class="play-overlay">▶</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-title" id="modal-title">—</div>
+      <div class="modal-meta"><span id="modal-type">—</span><span id="modal-size">—</span></div>
+      <div class="modal-acts">
+        <button class="m-btn m-apply" id="modal-apply-btn" onclick="modalApply()"><span id="modal-apply-lbl">Uygula</span></button>
+        <button class="m-btn m-del" onclick="modalDelete()">Sil</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let library      = [];
+let activeId     = null;
+let isPaused     = false;
+let curFilter    = 'all';
+let cfg          = {};
+let lang         = 'tr';
+let T_           = {};
+let modalWId     = null;
+let statusTimer  = null;
+
+// Thumbnail önbelleği — LRU, maks 30
+const THUMB_CACHE_MAX = 30;
+const thumbCache = new Map();
+function thumbCacheSet(id, dataUrl) {
+  if (thumbCache.has(id)) thumbCache.delete(id);
+  if (thumbCache.size >= THUMB_CACHE_MAX) thumbCache.delete(thumbCache.keys().next().value);
+  thumbCache.set(id, dataUrl);
+}
+
+// ── Debounced IPC save — art arda toggle'lar birleştirilir ───────────────────
+let _savePending = {};
+let _saveTimer   = null;
+function saveS(k, v) {
+  cfg[k] = v;
+  _savePending[k] = v;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    window.aetherwall?.saveSettings({ ..._savePending });
+    _savePending = {};
+  }, 200);
+}
+
+// ── Lazy thumbnail — IntersectionObserver ile sadece görünürde yükle ─────────
+let _thumbObserver = null;
+function getThumbObserver() {
+  if (_thumbObserver) return _thumbObserver;
+  _thumbObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const card = entry.target;
+      const wid  = card.dataset.id;
+      const cv   = card.querySelector('canvas');
+      if (!cv || cv.dataset.loaded) return;
+      cv.dataset.loaded = '1';
+      const w = library.find(x => x.id === wid);
+      if (w) drawThumb(w, cv);
+      _thumbObserver.unobserve(card);
+    });
+  }, { rootMargin: '100px' });
+  return _thumbObserver;
+}
+
+// ── i18n ──────────────────────────────────────────────────────────────────────
+async function initLang() {
+  try {
+    const r = await window.aetherwall?.getTranslations?.();
+    if (r) { lang = r.lang; T_ = r.translations; }
+  } catch {}
+  applyT();
+  const s = document.getElementById('lang-sel');
+  if (s) s.value = lang;
+}
+function T(k, fb) { return T_[k] || fb || k; }
+function applyT() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = T_[el.getAttribute('data-i18n')];
+    if (v) el.textContent = v;
+  });
+  syncPauseBtn();
+}
+async function changeLang(l) {
+  try { const r = await window.aetherwall?.setLanguage?.(l); if(r){lang=r.lang;T_=r.translations;} } catch {}
+  applyT(); renderShelf(); renderGameList();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  if (!window.aetherwall) return;
+  try {
+    [library, cfg] = await Promise.all([
+      window.aetherwall.loadLibrary(),
+      window.aetherwall.loadSettings(),
+    ]);
+    const a = library.find(w => w.isActive);
+    if (a) activeId = a.id;
+    applyCfgUI();
+    applyT();
+    updateStatus();
+
+    // Durum güncellemesi — UI görünürken 10sn, gizliyken durur
+    statusTimer = setInterval(updateStatus, 10000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { clearInterval(statusTimer); statusTimer = null; }
+      else if (!statusTimer) { updateStatus(); statusTimer = setInterval(updateStatus, 10000); }
+    });
+
+    window.aetherwall.onStatusUpdate?.(s => {
+      isPaused = s.isPaused;
+      syncPauseBtn();
+      updateStatus(s);
+    });
+    window.aetherwall.onAccentColor?.(c => applyAccentColor(c));
+    window.aetherwall.getAppVersion?.()
+      .then(v => { const el = document.getElementById('app-version'); if(el) el.textContent = 'v'+v; })
+      .catch(() => {});
+
+    renderShelf();
+    applyThemeOnLoad();
+    if (cfg.paletteId && cfg.paletteId !== 'aether') applyPalette(cfg.paletteId);
+    goTo('dashboard'); // Dashboard başlangıç sayfası
+  } catch(e) { console.error('[AW UI]', e); }
+}
+
+// ── Accent ────────────────────────────────────────────────────────────────────
+function applyAccentColor(rgb) {
+  const m = rgb.match(/rgb\((\d+),(\d+),(\d+)\)/);
+  if (!m) return;
+  const [,r,g,b] = m.map(Number);
+  const s = document.documentElement.style;
+  s.setProperty('--accent',      rgb);
+  s.setProperty('--accent2',     `rgb(${Math.min(255,r+30)},${Math.min(255,g+30)},${Math.min(255,b+30)})`);
+  s.setProperty('--accent-glow', `rgba(${r},${g},${b},.30)`);
+  s.setProperty('--accent-dim',  `rgba(${r},${g},${b},.14)`);
+  // Neon box-shadow değişkenini güncelle — tüm butonlar otomatik güncellenir
+  s.setProperty('--neon-sm',  `0 0 7px rgba(${r},${g},${b},.7), 0 0 14px rgba(${r},${g},${b},.4)`);
+  s.setProperty('--neon-md',  `0 0 10px rgba(${r},${g},${b},.8), 0 0 24px rgba(${r},${g},${b},.5), 0 0 40px rgba(${r},${g},${b},.25)`);
+  s.setProperty('--neon-lg',  `0 0 14px rgba(${r},${g},${b},.9), 0 0 32px rgba(${r},${g},${b},.6), 0 0 60px rgba(${r},${g},${b},.3)`);
+
+  // Orb renkleri güncelle — wallpaper dominant rengiyle yumuşak uyum
+  // (Palet açık değilse bu çalışır; palet seçiliyse palet orb'ları override eder)
+  const _orb1 = document.getElementById('lg-orb1');
+  const _orb2 = document.getElementById('lg-orb2');
+  if (_orb1) _orb1.style.background = `radial-gradient(circle,rgba(${r},${g},${b},.08),transparent 70%)`;
+  if (_orb2) _orb2.style.background = `radial-gradient(circle,rgba(${r},${g},${b},.05),transparent 70%)`;
+
+  if (cfg.windowsAccentSync) window.aetherwall?.setWindowsAccent?.(rgb);
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
+async function updateStatus(s) {
+  if (!s) { try { s = await window.aetherwall.getStatus(); } catch { return; } }
+  const dot = document.getElementById('s-dot');
+  const txt = document.getElementById('s-text');
+  if (!dot || !txt) return;
+  if (s.attached) {
+    dot.className = s.isPaused ? 'dot pau' : 'dot on';
+    txt.textContent = s.isPaused
+      ? T('status.paused','Duraklatıldı')
+      : `${T('status.active','Aktif')} · ${s.screenSize?.width}×${s.screenSize?.height}`;
+  } else {
+    dot.className = 'dot';
+    txt.textContent = T('status.noconn','Bağlantı yok');
+  }
+  isPaused = s.isPaused || false;
+  syncPauseBtn();
+}
+
+// ── Navigasyon ────────────────────────────────────────────────────────────────
+const VIEWS = ['dashboard','library','gamedetect','settings'];
+// Her view'in doğru display tipi
+const VIEW_DISPLAY = { dashboard:'flex', library:'flex', gamedetect:'flex', settings:'flex' };
+function goTo(name) {
+  VIEWS.forEach(v => {
+    const el = document.getElementById('view-'+v);
+    if (!el) return;
+    if (v === name) {
+      el.style.display = VIEW_DISPLAY[v] || 'flex';
+      el.style.flex    = '1';
+      el.style.minHeight = '0';
+    } else {
+      el.style.display = 'none';
+      el.style.flex    = '';
+    }
+  });
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('nav-'+name)?.classList.add('active');
+  if (name === 'library')    renderShelf();
+  if (name === 'gamedetect') renderGameList();
+  if (name === 'settings')   applyCfgUI();
+  if (name === 'dashboard')  renderDashboard();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const total     = document.getElementById('stat-total');
+  const activeType= document.getElementById('stat-active-type');
+  const statGame  = document.getElementById('stat-game');
+  const badge     = document.getElementById('stat-status-badge');
+  if (total)      total.textContent = library.length;
+  const activeW   = library.find(w => w.id === activeId);
+  const typeMap   = {video:'Video',image:'Görsel',html:'Web',shader:'Shader'};
+  if (activeType) activeType.textContent = activeW ? (typeMap[activeW.type]||'—') : '—';
+  if (statGame)   statGame.textContent = cfg.pauseOnFullscreen ? 'Açık' : 'Kapalı';
+  if (badge) { badge.textContent = isPaused?'Duraklatıldı':'Aktif'; badge.className='stat-badge '+(isPaused?'off':'on'); }
+
+  // Aktif wallpaper preview
+  const cv    = document.getElementById('dash-preview-canvas');
+  const nameEl= document.getElementById('dash-wp-name');
+  const metaEl= document.getElementById('dash-wp-meta');
+  if (activeW && cv) {
+    cv.width=640; cv.height=360;
+    if (thumbCache.has(activeW.id)) {
+      const img=new Image(); img.onload=()=>cv.getContext('2d').drawImage(img,0,0,640,360); img.src=thumbCache.get(activeW.id);
+    } else { drawThumb(activeW, cv); }
+    if (nameEl) nameEl.textContent = activeW.name;
+    if (metaEl) metaEl.textContent = (activeW.size||'') + ' · ' + (activeW.type||'').toUpperCase();
+  } else {
+    if (nameEl) nameEl.textContent = 'Wallpaper Seçilmedi';
+    if (metaEl) metaEl.textContent = 'Kütüphaneden bir wallpaper seçin';
+  }
+
+  // Pause butonu sync
+  const qaIco=document.getElementById('qa-pause-ico');
+  const qaLbl=document.getElementById('qa-pause-lbl');
+  if (qaIco) qaIco.textContent = isPaused?'▶':'⏸';
+  if (qaLbl) qaLbl.textContent = isPaused?'Devam Ettir':'Duraklat';
+
+  // Son 4 wallpaper
+  const grid = document.getElementById('recent-grid');
+  if (!grid) return;
+  const recent = [...library].slice(-4).reverse();
+  if (!recent.length) { grid.innerHTML='<div style="color:var(--text2);font-size:12px;padding:8px 0">Henüz wallpaper yok</div>'; return; }
+  grid.innerHTML='';
+  recent.forEach(w => {
+    const card=document.createElement('div'); card.className='recent-card'; card.onclick=()=>openModal(w.id);
+    const cv2=document.createElement('canvas'); cv2.width=320; cv2.height=180;
+    const lbl=document.createElement('div'); lbl.className='recent-card-name'; lbl.textContent=w.name;
+    card.append(cv2,lbl);
+    if (thumbCache.has(w.id)) { const img=new Image(); img.onload=()=>cv2.getContext('2d').drawImage(img,0,0,320,180); img.src=thumbCache.get(w.id); }
+    else drawThumb(w, cv2);
+    grid.appendChild(card);
+  });
+}
+
+
+
+// ── Shelf Render — kategoriye göre gruplu ─────────────────────────────────────
+const GROUP_DEFS = [
+  { key:'video',  label:'🎬 Canlı (Video)' },
+  { key:'image',  label:'🖼 Görsel' },
+  { key:'html',   label:'🌐 HTML & Web' },
+  { key:'shader', label:'✨ Shader' },
+];
+
+function renderShelf() {
+  const scroll  = document.getElementById('gallery-scroll');
+  const emptyEl = document.getElementById('empty-msg');
+  if (!scroll) return;
+
+  const base = curFilter === 'all' ? library : library.filter(w => w.type === curFilter);
+
+  if (!base.length) {
+    scroll.style.display = 'none';
+    emptyEl.style.display = 'flex';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  scroll.style.display  = 'flex'; // column flex
+
+  // Aktif kart güncelle (kart zaten varsa sadece class değiştir)
+  scroll.querySelectorAll('.s-card').forEach(c => {
+    c.classList.toggle('active-card', c.dataset.id === activeId);
+  });
+
+  // Hangi grupların var olduğunu hesapla
+  const groups = (curFilter === 'all' ? GROUP_DEFS : GROUP_DEFS.filter(g => g.key === curFilter))
+    .map(g => ({ ...g, items: base.filter(w => w.type === g.key) }))
+    .filter(g => g.items.length > 0);
+
+  // Mevcut grup id'leri
+  const existingGroupIds = new Set([...scroll.querySelectorAll('.shelf-group')].map(el => el.dataset.group));
+  const wantedGroupIds   = new Set(groups.map(g => g.key));
+
+  // Silinmiş grupları kaldır
+  scroll.querySelectorAll('.shelf-group').forEach(el => {
+    if (!wantedGroupIds.has(el.dataset.group)) el.remove();
+  });
+
+  const obs = getThumbObserver();
+
+  groups.forEach((g, gi) => {
+    let groupEl = scroll.querySelector(`.shelf-group[data-group="${g.key}"]`);
+    if (!groupEl) {
+      groupEl = document.createElement('div');
+      groupEl.className  = 'shelf-group';
+      groupEl.dataset.group = g.key;
+      groupEl.innerHTML = `
+        <div class="shelf-group-header">
+          <span class="shelf-group-title">${g.label}</span>
+          <span class="shelf-group-count" id="gc-${g.key}"></span>
+        </div>
+        <div class="shelf-group-grid" id="gg-${g.key}"></div>`;
+      scroll.appendChild(groupEl);
+    }
+
+    // Sayaç güncelle
+    const countEl = groupEl.querySelector(`#gc-${g.key}`);
+    if (countEl) countEl.textContent = g.items.length + ' öğe';
+
+    const grid   = groupEl.querySelector(`#gg-${g.key}`);
+    const newIds = new Set(g.items.map(w => w.id));
+
+    // Silinenleri kaldır
+    grid.querySelectorAll('.s-card').forEach(c => {
+      if (!newIds.has(c.dataset.id)) c.remove();
+    });
+
+    // Ekle / güncelle
+    g.items.forEach((w, i) => {
+      let card = grid.querySelector(`.s-card[data-id="${w.id}"]`);
+      if (!card) {
+        card = createCard(w);
+        grid.appendChild(card);
+        obs.observe(card);
+      }
+      card.classList.toggle('active-card', w.id === activeId);
+    });
+  });
+
+  // lib-count güncelle
+  const lc = document.getElementById('lib-count');
+  if (lc) lc.textContent = base.length ? base.length + ' wallpaper' : '';
+}
+
+function createCard(w) {
+  const card = document.createElement('div');
+  card.className   = 's-card';
+  card.dataset.id  = w.id;
+
+  // Thumbnail
+  const thumb = document.createElement('div');
+  thumb.className  = 's-thumb';
+  const cv = document.createElement('canvas');
+  cv.width = 320; cv.height = 180;
+  if (thumbCache.has(w.id)) {
+    const img = new Image();
+    img.onload = () => { cv.getContext('2d').drawImage(img, 0, 0, 320, 180); };
+    img.src = thumbCache.get(w.id);
+    cv.dataset.loaded = '1';
+  }
+  thumb.appendChild(cv);
+  card.appendChild(thumb);
+
+  // Overlay (isim + meta)
+  const overlay = document.createElement('div');
+  overlay.className = 's-overlay';
+  overlay.innerHTML = `<div class="s-name" title="${esc(w.name)}">${esc(w.name)}</div><div class="s-meta">${esc(w.size || '')}</div>`;
+  card.appendChild(overlay);
+
+  // Tip rozeti — sol üst
+  const badge = document.createElement('span');
+  badge.className = `s-badge b${w.type[0]}`;
+  const BADGE_LABELS = { video:'Canlı', image:'Görsel', html:'Web', shader:'Shader' };
+  badge.textContent = BADGE_LABELS[w.type] || w.type.toUpperCase();
+  card.appendChild(badge);
+
+  // Aktif rozet — sağ üst (referanstaki "✓ Aktif")
+  const activeBadge = document.createElement('div');
+  activeBadge.className = 's-active-badge';
+  activeBadge.textContent = 'Aktif';
+  card.appendChild(activeBadge);
+
+  card.onclick = () => openModal(w.id);
+  return card;
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Thumbnail çizici — önbellek destekli ──────────────────────────────────────
+function drawThumb(w, cv) {
+  // Retina/HiDPI: canvas boyutunu fiziksel piksel sayısına yükselt
+  const dpr  = window.devicePixelRatio || 1;
+  const logW = 320, logH = 180;
+  cv.width   = logW * dpr;
+  cv.height  = logH * dpr;
+  cv.style.width  = logW + 'px';
+  cv.style.height = logH + 'px';
+
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  if (w.type === 'video') {
+    const v = document.createElement('video');
+    v.src = w.path; v.muted = true; v.preload = 'metadata';
+    v.addEventListener('loadeddata', () => { v.currentTime = 0.5; }, { once:true });
+    v.addEventListener('seeked', () => {
+      try {
+        ctx.drawImage(v, 0, 0, logW, logH);
+        thumbCacheSet(w.id, cv.toDataURL('image/jpeg', 0.7));
+        v.src = ''; v.load();
+      } catch {}
+    }, { once:true });
+    v.load();
+
+  } else if (w.type === 'image') {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, logW, logH);
+      thumbCacheSet(w.id, cv.toDataURL('image/jpeg', 0.7));
+    };
+    img.src = w.path;
+
+  } else {
+    const colors = { html:'#0d2a1a,#1a5a3a', shader:'#1a0a3a,#4a1a8a' };
+    const [c1,c2] = (colors[w.type] || '#080812,#141428').split(',');
+    const g = ctx.createLinearGradient(0,0,logW,logH);
+    g.addColorStop(0,c1); g.addColorStop(1,c2);
+    ctx.fillStyle = g; ctx.fillRect(0,0,logW,logH);
+    ctx.font = '40px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText({html:'🌐',shader:'✨'}[w.type]||'📄', logW/2, logH/2);
+  }
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const w = library.find(x => x.id === id);
+  if (!w) return;
+  modalWId = id;
+
+  document.getElementById('modal-title').textContent = w.name;
+  document.getElementById('modal-type').textContent  = '🎞 ' + w.type.toUpperCase();
+  document.getElementById('modal-size').textContent  = '💾 ' + (w.size || '—');
+
+  const isActive = w.id === activeId;
+  const applyBtn = document.getElementById('modal-apply-btn');
+  const applyLbl = document.getElementById('modal-apply-lbl');
+  applyBtn.classList.toggle('is-active', isActive);
+  applyLbl.textContent = isActive ? T('card.active','✓ Aktif') : T('card.apply','Uygula');
+
+  // Önizleme
+  const canvas = document.getElementById('modal-canvas');
+  const video  = document.getElementById('modal-video');
+  canvas.width  = 560; canvas.height = 315;
+
+  if (w.type === 'video') {
+    canvas.style.display = 'none';
+    video.style.display  = 'block';
+    video.src = w.path;
+    video.play().catch(() => {});
+  } else {
+    video.pause(); video.src = ''; video.style.display = 'none';
+    canvas.style.display = 'block';
+    if (w.type === 'image') {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 560, 315);
+      };
+      img.src = w.path;
+    } else {
+      // HTML/shader — canvas'a bilgi
+      const ctx = canvas.getContext('2d');
+      const colors = { html:'#0d2a1a,#1a5a3a', shader:'#1a0a3a,#4a1a8a' };
+      const [c1,c2] = (colors[w.type]||'#080812,#141428').split(',');
+      const g = ctx.createLinearGradient(0,0,560,315);
+      g.addColorStop(0,c1); g.addColorStop(1,c2);
+      ctx.fillStyle=g; ctx.fillRect(0,0,560,315);
+      ctx.font='60px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText({html:'🌐',shader:'✨'}[w.type]||'📄', 280, 157);
+    }
+  }
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) closeModalDirect();
+}
+function closeModalDirect() {
+  // Video'yu durdur ve belleği serbest bırak
+  const video = document.getElementById('modal-video');
+  video.pause(); video.src = ''; video.load();
+  document.getElementById('modal').classList.remove('open');
+  modalWId = null;
+}
+
+async function modalApply() {
+  if (!modalWId) return;
+  await applyWallpaper(modalWId);
+  // Modal'daki butonu güncelle
+  const applyBtn = document.getElementById('modal-apply-btn');
+  const applyLbl = document.getElementById('modal-apply-lbl');
+  applyBtn.classList.add('is-active');
+  applyLbl.textContent = T('card.active','✓ Aktif');
+}
+async function modalDelete() {
+  if (!modalWId) return;
+  closeModalDirect();
+  await delWallpaper(modalWId);
+}
+
+// ── Wallpaper işlemleri ───────────────────────────────────────────────────────
+async function applyWallpaper(id) {
+  const w = library.find(x => x.id === id); if(!w) return;
+  library.forEach(x => x.isActive = false); w.isActive = true; activeId = id;
+  await window.aetherwall?.loadWallpaper(w.path, w.type);
+  await window.aetherwall?.saveLibrary(library);
+  renderShelf();
+}
+
+async function delWallpaper(id) {
+  library = library.filter(w => w.id !== id);
+  thumbCache.delete(id);
+  if (activeId === id) activeId = null;
+  await window.aetherwall?.saveLibrary(library);
+  renderShelf();
+}
+
+async function pushToLibrary(fp, name, type, size) {
+  let safe = fp;
+  try { const c = await window.aetherwall?.copyWallpaper?.(fp); if(c) safe = c; } catch {}
+  const id = 'wp_' + Date.now();
+  library.unshift({ id, name, path:safe, type, size:size||'—', isActive:false, addedAt:Date.now() });
+  await window.aetherwall?.saveLibrary(library);
+  renderShelf();
+  await applyWallpaper(id);
+}
+
+async function addWallpaper() {
+  const f = await window.aetherwall?.openFileDialog(); if(!f) return;
+  await pushToLibrary(f.path, f.name, f.type);
+}
+
+async function togglePause() {
+  if (isPaused) { await window.aetherwall?.resumeWallpaper(); isPaused = false; }
+  else          { await window.aetherwall?.pauseWallpaper();  isPaused = true;  }
+  syncPauseBtn();
+}
+function syncPauseBtn() {
+  const btn = document.getElementById('pause-btn');
+  if (!btn) return;
+  const icon = isPaused ? '▶' : '⏸';
+  const text = isPaused ? T('btn.resume','Devam Et') : T('btn.pause','Duraklat');
+  btn.innerHTML = `${icon} <span id="pause-lbl">${text}</span>`;
+}
+
+function setFilter(v, el) {
+  curFilter = v;
+  document.querySelectorAll('.chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderShelf();
+}
+
+// Drag & drop
+function onDragOver(e)  { e.preventDefault(); document.getElementById('shelf-wrap').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('shelf-wrap').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault(); document.getElementById('shelf-wrap').classList.remove('drag-over');
+  const map = {mp4:'video',webm:'video',html:'html',htm:'html',glsl:'shader',frag:'shader',
+               jpg:'image',jpeg:'image',png:'image',gif:'image',webp:'image'};
+  [...e.dataTransfer.files].forEach(async f => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    const fp  = f.path ? 'file:///'+f.path.replace(/\\/g,'/') : URL.createObjectURL(f);
+    await pushToLibrary(fp, f.name.replace(/\.[^.]+$/,''), map[ext]||'image', (f.size/1024/1024).toFixed(1)+' MB');
+  });
+}
+
+// ── Ayarlar ───────────────────────────────────────────────────────────────────
+function applyCfgUI() {
+  const g = id => document.getElementById(id);
+  if (g('fps-sel'))    g('fps-sel').value   = cfg.fpsLimit || '60';
+  if (g('vol-r'))    { g('vol-r').value     = cfg.volume ?? 0; g('vol-lbl').textContent = (cfg.volume ?? 0) + '%'; }
+  if (g('spd-sel'))    g('spd-sel').value   = cfg.playbackSpeed || '1.0';
+  if (g('tog-bat'))    g('tog-bat').classList.toggle('on',  !!cfg.pauseOnBattery);
+  if (g('tog-tray'))   g('tog-tray').classList.toggle('on', cfg.minimizeToTray !== false);
+  if (g('tog-game'))   g('tog-game').classList.toggle('on', !!cfg.pauseOnFullscreen);
+  if (g('tog-accent')) g('tog-accent').classList.toggle('on', !!cfg.windowsAccentSync);
+  if (g('tog-multimon')) g('tog-multimon').classList.toggle('on', !!cfg.multiMonitor);
+  if (cfg.multiMonitor) renderMonitorList();
+  if (g('lang-sel'))   g('lang-sel').value  = lang;
+  window.aetherwall?.getAutostart?.()
+    .then(v => g('tog-start')?.classList.toggle('on', !!v))
+    .catch(() => {});
+}
+function saveS(k,v)    { cfg[k]=v; window.aetherwall?.saveSettings({[k]:v}); }
+function onVol(v)      { document.getElementById('vol-lbl').textContent = v+'%'; saveS('volume', parseInt(v)); }
+function toggleS(k,id) {
+  cfg[k] = !cfg[k];
+  document.getElementById(id).classList.toggle('on', cfg[k]);
+  window.aetherwall?.saveSettings({[k]: cfg[k]});
+}
+async function toggleStartup() {
+  const cur = await window.aetherwall?.getAutostart?.() || false;
+  await window.aetherwall?.setAutostart?.(!cur);
+  document.getElementById('tog-start').classList.toggle('on', !cur);
+  saveS('startWithWindows', !cur);
+}
+async function toggleAccent() {
+  cfg.windowsAccentSync = !cfg.windowsAccentSync;
+  document.getElementById('tog-accent').classList.toggle('on', cfg.windowsAccentSync);
+  saveS('windowsAccentSync', cfg.windowsAccentSync);
+  if (!cfg.windowsAccentSync) await window.aetherwall?.resetWindowsAccent?.();
+}
+
+// ── Çoklu Monitör ─────────────────────────────────────────────────────────────
+async function toggleMultiMonitor() {
+  cfg.multiMonitor = !cfg.multiMonitor;
+  document.getElementById('tog-multimon').classList.toggle('on', cfg.multiMonitor);
+  saveS('multiMonitor', cfg.multiMonitor);
+  renderMonitorList();
+}
+
+async function renderMonitorList() {
+  const listEl = document.getElementById('monitor-list');
+  if (!listEl) return;
+
+  if (!cfg.multiMonitor) {
+    listEl.style.display = 'none';
+    listEl.innerHTML = '';
+    return;
+  }
+  listEl.style.display = 'flex';
+  listEl.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:4px 0">Monitörler yükleniyor...</div>';
+
+  let monitors = [];
+  try {
+    const result = await window.aetherwall?.getMonitors?.();
+    if (Array.isArray(result)) monitors = result;
+  } catch(e) {
+    console.error('[AW] Monitor list error:', e);
+  }
+
+  if (!monitors.length) {
+    listEl.innerHTML = `<div style="font-size:11px;color:var(--text2);padding:6px 0">⚠ Monitör bilgisi alınamadı — tek monitör algılandı</div>`;
+    return;
+  }
+
+  listEl.innerHTML = monitors.map((m, i) => {
+    const activeW = cfg.monitorConfig?.[m.id];
+    const label   = m.label || (m.isPrimary ? `Monitör ${i+1} (Ana)` : `Monitör ${i+1}`);
+    const size    = `${m.bounds?.width||0}×${m.bounds?.height||0}${m.scaleFactor && m.scaleFactor !== 1 ? ' · '+m.scaleFactor+'x' : ''}`;
+    return `
+      <div class="monitor-row" data-mon-id="${m.id}">
+        <div class="monitor-info">
+          <div class="monitor-name">${label}</div>
+          <div class="monitor-size">${size}</div>
+        </div>
+        <div class="monitor-controls">
+          <span class="monitor-wp-name" id="mwp-${m.id}">${activeW ? esc(activeW.name) : 'Seçilmedi'}</span>
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="showMonitorPicker('${m.id}')">Seç</button>
+          ${activeW ? `<button class="btn" style="font-size:10px;padding:4px 8px;background:rgba(255,60,60,.15);border-color:rgba(255,60,60,.25);color:var(--red)" onclick="clearMonitorWallpaper('${m.id}')">✕</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function pickWallpaperForMonitor(monId) {
+  if (!library.length) return;
+  // Basit seçim: aktif kütüphaneden seçim yapılır, modal benzeri liste
+  const pick = library[0]; // TODO: seçim UI'ı
+  // Şimdilik — kullanıcıya kütüphaneden tıklama ile seçtir
+  // Monitor config'e kaydet
+  if (!cfg.monitorConfig) cfg.monitorConfig = {};
+  // Seçim UI'ı için küçük prompt benzeri menü göster
+  showMonitorPicker(monId);
+}
+
+function showMonitorPicker(monId) {
+  // Basit inline seçici — mevcut library'den seç
+  const listEl = document.getElementById('monitor-list');
+  const pickerHtml = `
+    <div id="mon-picker-${monId}" style="
+      background:var(--lg-bg);backdrop-filter:blur(20px);
+      border:1px solid var(--lg-border);border-radius:12px;
+      padding:10px;margin-top:4px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;
+    ">
+      ${library.map(w => `
+        <div onclick="applyWallpaperToMonitor('${monId}','${w.id}')" style="
+          padding:7px 10px;border-radius:8px;cursor:pointer;
+          display:flex;align-items:center;gap:8px;font-size:11.5px;
+          transition:.12s;color:var(--text0);
+        " onmouseover="this.style.background='var(--lg-bg-hover)'" onmouseout="this.style.background=''"
+        ><span style="font-size:10px;opacity:.6">${{video:'🎬',image:'🖼',html:'🌐',shader:'✨'}[w.type]||'📄'}</span>${esc(w.name)}</div>
+      `).join('')}
+    </div>`;
+  const existing = document.getElementById(`mon-picker-${monId}`);
+  if (existing) { existing.remove(); return; }
+  const row = listEl.querySelector(`[data-mon-id="${monId}"]`);
+  if (row) row.insertAdjacentHTML('afterend', pickerHtml);
+}
+
+async function applyWallpaperToMonitor(monId, wallpaperId) {
+  const w = library.find(x => x.id === wallpaperId);
+  if (!w) return;
+  if (!cfg.monitorConfig) cfg.monitorConfig = {};
+  cfg.monitorConfig[monId] = { id: w.id, name: w.name, path: w.path, type: w.type };
+  saveS('monitorConfig', cfg.monitorConfig);
+  try { await window.aetherwall?.loadWallpaperOnDisplay?.(parseInt(monId), w.path, w.type); } catch {}
+  document.getElementById(`mon-picker-${monId}`)?.remove();
+  renderMonitorList();
+}
+
+async function clearMonitorWallpaper(monId) {
+  if (cfg.monitorConfig) delete cfg.monitorConfig[monId];
+  saveS('monitorConfig', cfg.monitorConfig);
+  renderMonitorList();
+}
+
+// ── Oyun algılama ─────────────────────────────────────────────────────────────
+async function renderGameList() {
+  const st   = await window.aetherwall?.getGameStatus?.() || {};
+  const el   = document.getElementById('game-list'); if (!el) return;
+  const list = st.customProcesses || [];
+  el.innerHTML = list.length
+    ? list.map(g => `<div class="gtag"><span>🎮</span><span class="gn">${esc(g)}</span><button onclick="removeGame('${esc(g)}')">✕</button></div>`).join('')
+    : `<div style="font-size:11.5px;color:var(--text2)">${T('game.empty','Özel process eklenmedi')}</div>`;
+}
+async function addGame() {
+  const inp = document.getElementById('game-inp'), n = inp.value.trim(); if(!n) return;
+  await window.aetherwall?.addGameProcess(n); inp.value = ''; renderGameList();
+}
+async function removeGame(n) { await window.aetherwall?.removeGameProcess(n); renderGameList(); }
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-theme');
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = isLight ? '🌙' : '☀';
+  saveS('lightTheme', isLight);
+}
+
+function applyThemeOnLoad() {
+  if (cfg.lightTheme) {
+    document.body.classList.add('light-theme');
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = '🌙';
+  }
+}
+
+// ── Başlat ────────────────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════
+// ── RENK PALETLERİ ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+const COLOR_PALETTES = [
+  { id:'aether', name:'Aether',
+    accent:'#7c6af7', accent2:'#a78bfa', glow:'rgba(124,106,247,.3)', dim:'rgba(124,106,247,.13)',
+    sw:['#3d2d9e','#7c6af7','#c4b8ff'],
+    bg1:'#04040e', bg2:'#060418', bg3:'#040810',
+    orb1:'rgba(124,106,247,.12)', orb2:'rgba(91,60,220,.09)',
+    lgBg:'rgba(255,255,255,.065)', lgBorder:'rgba(255,255,255,.16)', lgTop:'rgba(255,255,255,.34)',
+    textBase:'#f0f0f8', text1:'#9090b0', text2:'#505068'},
+  { id:'crimson', name:'Crimson',
+    accent:'#f74a6a', accent2:'#ff8fa3', glow:'rgba(247,74,106,.3)', dim:'rgba(247,74,106,.13)',
+    sw:['#8b1a2e','#f74a6a','#ffb3c0'],
+    bg1:'#0f0408', bg2:'#180609', bg3:'#0a0306',
+    orb1:'rgba(247,74,106,.12)', orb2:'rgba(180,30,60,.09)',
+    lgBg:'rgba(255,220,225,.055)', lgBorder:'rgba(255,200,210,.16)', lgTop:'rgba(255,220,230,.32)',
+    textBase:'#fdf0f2', text1:'#b09098', text2:'#685058'},
+  { id:'emerald', name:'Emerald',
+    accent:'#22c55e', accent2:'#6ee7a0', glow:'rgba(34,197,94,.28)', dim:'rgba(34,197,94,.12)',
+    sw:['#0d4a28','#22c55e','#9effc4'],
+    bg1:'#030e07', bg2:'#04140a', bg3:'#030a06',
+    orb1:'rgba(34,197,94,.11)', orb2:'rgba(16,120,50,.08)',
+    lgBg:'rgba(220,255,235,.05)', lgBorder:'rgba(180,240,210,.14)', lgTop:'rgba(200,255,225,.30)',
+    textBase:'#f0fdf4', text1:'#90b09a', text2:'#507060'},
+  { id:'ocean', name:'Ocean',
+    accent:'#0ea5e9', accent2:'#7dd3f7', glow:'rgba(14,165,233,.28)', dim:'rgba(14,165,233,.12)',
+    sw:['#063454','#0ea5e9','#bae8ff'],
+    bg1:'#030a10', bg2:'#050e18', bg3:'#03080e',
+    orb1:'rgba(14,165,233,.12)', orb2:'rgba(6,100,160,.09)',
+    lgBg:'rgba(220,245,255,.055)', lgBorder:'rgba(180,225,250,.15)', lgTop:'rgba(200,235,255,.32)',
+    textBase:'#f0f8ff', text1:'#8898b0', text2:'#485868'},
+  { id:'amber', name:'Amber',
+    accent:'#f59e0b', accent2:'#fcd34d', glow:'rgba(245,158,11,.28)', dim:'rgba(245,158,11,.12)',
+    sw:['#6b3d00','#f59e0b','#fef08a'],
+    bg1:'#0e0900', bg2:'#160d00', bg3:'#0a0700',
+    orb1:'rgba(245,158,11,.12)', orb2:'rgba(180,100,5,.09)',
+    lgBg:'rgba(255,245,210,.055)', lgBorder:'rgba(255,230,160,.15)', lgTop:'rgba(255,240,190,.32)',
+    textBase:'#fffbf0', text1:'#b0a080', text2:'#706040'},
+  { id:'rose', name:'Rose',
+    accent:'#ec4899', accent2:'#f9a8d4', glow:'rgba(236,72,153,.28)', dim:'rgba(236,72,153,.12)',
+    sw:['#6d1040','#ec4899','#fbcfe8'],
+    bg1:'#0e0309', bg2:'#16040e', bg3:'#0a0307',
+    orb1:'rgba(236,72,153,.12)', orb2:'rgba(160,30,100,.09)',
+    lgBg:'rgba(255,220,240,.055)', lgBorder:'rgba(255,190,220,.15)', lgTop:'rgba(255,210,235,.32)',
+    textBase:'#fdf4f8', text1:'#b090a0', text2:'#685060'},
+  { id:'cyan', name:'Cyan',
+    accent:'#06b6d4', accent2:'#67e8f9', glow:'rgba(6,182,212,.28)', dim:'rgba(6,182,212,.12)',
+    sw:['#083344','#06b6d4','#a5f3fc'],
+    bg1:'#020e10', bg2:'#031418', bg3:'#020b0d',
+    orb1:'rgba(6,182,212,.12)', orb2:'rgba(4,120,140,.09)',
+    lgBg:'rgba(210,250,255,.05)', lgBorder:'rgba(170,240,252,.14)', lgTop:'rgba(190,248,255,.30)',
+    textBase:'#f0feff', text1:'#88a8b0', text2:'#486068'},
+  { id:'lime', name:'Lime',
+    accent:'#84cc16', accent2:'#bef264', glow:'rgba(132,204,22,.28)', dim:'rgba(132,204,22,.12)',
+    sw:['#2d4a00','#84cc16','#ecfccb'],
+    bg1:'#060e00', bg2:'#091600', bg3:'#050a00',
+    orb1:'rgba(132,204,22,.11)', orb2:'rgba(80,130,10,.08)',
+    lgBg:'rgba(235,255,200,.05)', lgBorder:'rgba(200,240,150,.14)', lgTop:'rgba(220,250,170,.30)',
+    textBase:'#f7fff0', text1:'#98b080', text2:'#587040'},
+  { id:'violet', name:'Violet',
+    accent:'#d946ef', accent2:'#f0abfc', glow:'rgba(217,70,239,.28)', dim:'rgba(217,70,239,.13)',
+    sw:['#5b0e6b','#d946ef','#fae8ff'],
+    bg1:'#0a0310', bg2:'#100418', bg3:'#07020c',
+    orb1:'rgba(217,70,239,.12)', orb2:'rgba(140,20,170,.09)',
+    lgBg:'rgba(250,220,255,.055)', lgBorder:'rgba(240,185,255,.15)', lgTop:'rgba(248,210,255,.32)',
+    textBase:'#fdf4ff', text1:'#a888b8', text2:'#685078'},
+  { id:'mono', name:'Mono',
+    accent:'#94a3b8', accent2:'#e2e8f0', glow:'rgba(148,163,184,.22)', dim:'rgba(148,163,184,.10)',
+    sw:['#1e2535','#64748b','#e2e8f0'],
+    bg1:'#060608', bg2:'#0a0c10', bg3:'#060608',
+    orb1:'rgba(148,163,184,.07)', orb2:'rgba(100,116,139,.05)',
+    lgBg:'rgba(255,255,255,.06)', lgBorder:'rgba(255,255,255,.14)', lgTop:'rgba(255,255,255,.28)',
+    textBase:'#f1f5f9', text1:'#94a3b8', text2:'#475569'},
+]
+
+let activePaletteId = cfg.paletteId || 'aether';
+
+function buildPaletteGrid() {
+  const grid = document.getElementById('palette-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  COLOR_PALETTES.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'pal-item' + (p.id === activePaletteId ? ' active' : '');
+    item.dataset.id = p.id;
+
+    const swatch = document.createElement('div');
+    swatch.className = 'pal-swatch';
+    // 3 tonlu gradient swatch
+    swatch.style.background = `linear-gradient(135deg, ${p.sw[0]} 0%, ${p.sw[1]} 55%, ${p.sw[2]} 100%)`;
+
+    const name = document.createElement('div');
+    name.className = 'pal-name';
+    name.textContent = p.name;
+
+    item.appendChild(swatch);
+    item.appendChild(name);
+    item.onclick = () => applyPalette(p.id);
+    grid.appendChild(item);
+  });
+}
+
+function applyPalette(id) {
+  const p = COLOR_PALETTES.find(x => x.id === id);
+  if (!p) return;
+  activePaletteId = id;
+
+  const s = document.documentElement.style;
+
+  // ── Accent renkleri ──
+  s.setProperty('--accent',      p.accent);
+  s.setProperty('--accent2',     p.accent2);
+  s.setProperty('--accent-glow', p.glow);
+  s.setProperty('--accent-dim',  p.dim);
+
+  // ── Neon shadow'lar ──
+  const hex = p.accent;
+  const r = parseInt(hex.slice(1,3),16);
+  const g2 = parseInt(hex.slice(3,5),16);
+  const b  = parseInt(hex.slice(5,7),16);
+  s.setProperty('--neon-sm', `0 0 8px rgba(${r},${g2},${b},.7), 0 0 18px rgba(${r},${g2},${b},.4)`);
+  s.setProperty('--neon-md', `0 0 12px rgba(${r},${g2},${b},.85), 0 0 28px rgba(${r},${g2},${b},.55), 0 0 50px rgba(${r},${g2},${b},.25)`);
+  s.setProperty('--neon-lg', `0 0 16px rgba(${r},${g2},${b},.9), 0 0 36px rgba(${r},${g2},${b},.6), 0 0 64px rgba(${r},${g2},${b},.3)`);
+
+  // ── Arka plan rengi ──
+  s.setProperty('--bg-1', p.bg1);
+  s.setProperty('--bg-2', p.bg2);
+  s.setProperty('--bg-3', p.bg3);
+
+  // ── Liquid glass yüzey renkleri ──
+  s.setProperty('--lg-bg',     p.lgBg);
+  s.setProperty('--lg-border', p.lgBorder);
+  s.setProperty('--lg-top',    p.lgTop);
+
+  // ── Metin renkleri ──
+  s.setProperty('--text0', p.textBase);
+  s.setProperty('--text1', p.text1);
+  s.setProperty('--text2', p.text2);
+
+  // ── Arka plan değişkenleri ──
+  s.setProperty('--bg-1', p.bg1);
+  s.setProperty('--bg-2', p.bg2);
+  s.setProperty('--bg-3', p.bg3);
+
+  // ── Ambient orb'lar + CSS değişkenleri ──
+  const s2 = document.documentElement.style;
+  s2.setProperty('--orb1-color', p.orb1);
+  s2.setProperty('--orb2-color', p.orb2);
+  const orb1 = document.getElementById('lg-orb1');
+  const orb2 = document.getElementById('lg-orb2');
+  if (orb1) orb1.style.background = `radial-gradient(circle,${p.orb1},transparent 70%)`;
+  if (orb2) orb2.style.background = `radial-gradient(circle,${p.orb2},transparent 70%)`;
+
+  // ── Palet seçici güncelle ──
+  document.querySelectorAll('.pal-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+
+  // ── Kaydet ──
+  cfg.paletteId = id;
+  saveS('paletteId', id);
+}
+
+initLang().then(() => init());
+
+</script>
+</body>
+</html>

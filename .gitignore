@@ -1,0 +1,30 @@
+node_modules/
+dist/
+build/
+out/
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/
+.idea/
+*.swp
+
+# Kullanıcı verisi / yerel ayarlar (asla repoya gitmemeli)
+.aetherwall/
+settings.json
+library.json
+
+# electron-builder geçici dosyaları
+.electron-builder-cache/
+
+# Kullanılmayan/rafa kaldırılan özellik dosyaları (Supabase topluluk özelliği henüz aktif değil)
+supabase-*.sql
+
+# Kopyalama sırasında oluşmuş bozuk klasör
+{src/
+
+*.exe

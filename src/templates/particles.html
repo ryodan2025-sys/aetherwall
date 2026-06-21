@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; }
+  body { background:#000; overflow:hidden; width:100vw; height:100vh; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+let W = canvas.width  = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+let mouseX = W / 2, mouseY = H / 2;
+let clicking = false;
+
+// ── Ayarlar (window.AETHER_CONFIG ile dışarıdan değiştirilebilir) ────────────
+const CFG = Object.assign({
+  maxParticles:  800,
+  spawnRate:     8,       // frame başına doğan parçacık
+  particleLife:  120,     // frame cinsinden ömür
+  speed:         3,
+  colors:        ['#7c6af7','#a78bfa','#60a5fa','#34d399','#f472b6'],
+  connectDist:   120,     // parçacıklar arası bağlantı mesafesi
+  mouseAttract:  true,    // fare çekim efekti
+  trailEffect:   true,    // iz efekti
+}, window.AETHER_CONFIG || {});
+
+// ── Parçacık sınıfı ───────────────────────────────────────────────────────────
+class Particle {
+  constructor(x, y, burst = false) {
+    this.x  = x + (Math.random() - .5) * 20;
+    this.y  = y + (Math.random() - .5) * 20;
+    const angle = Math.random() * Math.PI * 2;
+    const spd   = burst ? Math.random() * 8 + 2 : Math.random() * CFG.speed;
+    this.vx  = Math.cos(angle) * spd;
+    this.vy  = Math.sin(angle) * spd;
+    this.life = CFG.particleLife + Math.random() * 60;
+    this.maxLife = this.life;
+    this.r    = Math.random() * 3 + 1;
+    this.col  = CFG.colors[Math.floor(Math.random() * CFG.colors.length)];
+    this.burst = burst;
+  }
+
+  update() {
+    if (CFG.mouseAttract && !this.burst) {
+      const dx = mouseX - this.x;
+      const dy = mouseY - this.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 200) {
+        this.vx += dx / dist * 0.3;
+        this.vy += dy / dist * 0.3;
+      }
+    }
+    // Hız sınırı
+    const spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (spd > 6) { this.vx = this.vx/spd*6; this.vy = this.vy/spd*6; }
+
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.x  += this.vx;
+    this.y  += this.vy;
+    this.life--;
+
+    // Kenardan sek
+    if (this.x < 0 || this.x > W) this.vx *= -0.8;
+    if (this.y < 0 || this.y > H) this.vy *= -0.8;
+  }
+
+  draw() {
+    const alpha = (this.life / this.maxLife);
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.shadowColor = this.col;
+    ctx.shadowBlur  = 8;
+    ctx.fillStyle   = this.col;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── Parçacık havuzu ───────────────────────────────────────────────────────────
+let particles = [];
+
+function spawnAt(x, y, count = CFG.spawnRate, burst = false) {
+  for (let i = 0; i < count; i++) {
+    if (particles.length < CFG.maxParticles) {
+      particles.push(new Particle(x, y, burst));
+    }
+  }
+}
+
+// ── Bağlantı çiz ─────────────────────────────────────────────────────────────
+function drawConnections() {
+  const len = Math.min(particles.length, 200); // performans için sınırla
+  for (let i = 0; i < len; i++) {
+    for (let j = i + 1; j < len; j++) {
+      const dx   = particles[i].x - particles[j].x;
+      const dy   = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < CFG.connectDist) {
+        const alpha = (1 - dist / CFG.connectDist) * 0.15;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = particles[i].col;
+        ctx.lineWidth   = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+}
+
+// ── Ana döngü ─────────────────────────────────────────────────────────────────
+function loop() {
+  requestAnimationFrame(loop);
+
+  if (CFG.trailEffect) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.clearRect(0, 0, W, H);
+  }
+
+  // Mouse etrafında parçacık doğur
+  spawnAt(mouseX, mouseY, CFG.spawnRate);
+
+  // Güncelle ve çiz
+  particles = particles.filter(p => p.life > 0);
+  drawConnections();
+  particles.forEach(p => { p.update(); p.draw(); });
+
+  // Mouse halkası
+  ctx.save();
+  ctx.strokeStyle = 'rgba(124,106,247,0.4)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.arc(mouseX, mouseY, 20 + Math.sin(Date.now()*0.005)*5, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ── Eventler ─────────────────────────────────────────────────────────────────
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX; mouseY = e.clientY;
+});
+
+window.addEventListener('mousedown', e => {
+  clicking = true;
+  spawnAt(e.clientX, e.clientY, 60, true); // patlama
+});
+
+window.addEventListener('mouseup', () => clicking = false);
+
+window.addEventListener('resize', () => {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+});
+
+// ── Başlat ────────────────────────────────────────────────────────────────────
+// Ortada başlangıç parçacıkları
+for (let i = 0; i < 100; i++) {
+  particles.push(new Particle(
+    Math.random() * W,
+    Math.random() * H
+  ));
+}
+loop();
+</script>
+</body>
+</html>

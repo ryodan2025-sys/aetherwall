@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; }
+  body { background:#060610; overflow:hidden; width:100vw; height:100vh; cursor:none; }
+  canvas { display:block; }
+  #cursor {
+    position:fixed; pointer-events:none; z-index:99; transform:translate(-50%,-50%);
+    width:40px; height:40px; border:2px solid rgba(124,106,247,.6); border-radius:50%;
+    transition:transform .1s;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="cursor"></div>
+
+<script>
+'use strict';
+
+const canvas  = document.getElementById('c');
+const ctx     = canvas.getContext('2d');
+const cursor  = document.getElementById('cursor');
+let W = canvas.width  = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+
+let mouseX = W/2, mouseY = H/2;
+let mouseDown = false;
+let dragBall = null;
+
+// ── Fizik sabitler ────────────────────────────────────────────────────────────
+const GRAVITY    = 0.4;
+const FRICTION   = 0.99;
+const BOUNCE     = 0.75;
+const BALL_COUNT = 25;
+
+// ── Top sınıfı ────────────────────────────────────────────────────────────────
+class Ball {
+  constructor() {
+    this.r    = 15 + Math.random() * 35;
+    this.x    = this.r + Math.random() * (W - this.r * 2);
+    this.y    = this.r + Math.random() * H * 0.5;
+    this.vx   = (Math.random() - 0.5) * 8;
+    this.vy   = Math.random() * 4;
+    this.mass = this.r * this.r * 0.01;
+    this.hue  = Math.random() * 360;
+    this.sat  = 70 + Math.random() * 30;
+    this.lit  = 45 + Math.random() * 25;
+    this.glow = Math.random() * 20;
+    this.angle= 0; // rotasyon
+    this.spin = (Math.random() - 0.5) * 0.1;
+  }
+
+  update() {
+    if (this === dragBall) return; // fare ile sürükleniyor
+
+    this.vy += GRAVITY;
+    this.vx *= FRICTION;
+    this.vy *= FRICTION;
+
+    this.x += this.vx;
+    this.y += this.vy;
+    this.angle += this.spin;
+
+    // Zemin
+    if (this.y + this.r > H) {
+      this.y  = H - this.r;
+      this.vy *= -BOUNCE;
+      this.vx *= 0.95;
+      if (Math.abs(this.vy) < 1) this.vy = 0;
+    }
+    // Tavan
+    if (this.y - this.r < 0) {
+      this.y  = this.r;
+      this.vy *= -BOUNCE;
+    }
+    // Sol/sağ duvar
+    if (this.x - this.r < 0) {
+      this.x  = this.r;
+      this.vx *= -BOUNCE;
+    }
+    if (this.x + this.r > W) {
+      this.x  = W - this.r;
+      this.vx *= -BOUNCE;
+    }
+  }
+
+  draw() {
+    const alpha = this === dragBall ? 0.9 : 1;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    // Gölge
+    ctx.shadowColor = `hsl(${this.hue},${this.sat}%,60%)`;
+    ctx.shadowBlur  = this.glow + 10;
+
+    // Top gradient
+    const grad = ctx.createRadialGradient(-this.r*0.3, -this.r*0.3, 0, 0, 0, this.r);
+    grad.addColorStop(0, `hsla(${this.hue},${this.sat}%,${this.lit+25}%,${alpha})`);
+    grad.addColorStop(0.5, `hsla(${this.hue},${this.sat}%,${this.lit}%,${alpha})`);
+    grad.addColorStop(1, `hsla(${this.hue},${this.sat}%,${this.lit-15}%,${alpha})`);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI*2);
+    ctx.fill();
+
+    // Parlaklık
+    const shine = ctx.createRadialGradient(-this.r*0.35, -this.r*0.35, 0, -this.r*0.3, -this.r*0.3, this.r*0.6);
+    shine.addColorStop(0, 'rgba(255,255,255,0.35)');
+    shine.addColorStop(1, 'transparent');
+    ctx.fillStyle = shine;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// ── Top çarpışması ────────────────────────────────────────────────────────────
+function resolveCollision(a, b) {
+  const dx   = b.x - a.x;
+  const dy   = b.y - a.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist >= a.r + b.r || dist === 0) return;
+
+  // Çakışmayı düzelt
+  const overlap = (a.r + b.r - dist) / 2;
+  const nx = dx / dist, ny = dy / dist;
+  a.x -= nx * overlap; a.y -= ny * overlap;
+  b.x += nx * overlap; b.y += ny * overlap;
+
+  // Hız değiş tokuşu (momentum korunumu)
+  const dvx = a.vx - b.vx;
+  const dvy = a.vy - b.vy;
+  const dot  = dvx*nx + dvy*ny;
+  if (dot > 0) return;
+
+  const J = (2 * dot) / (1/a.mass + 1/b.mass);
+  a.vx -= J/a.mass * nx * BOUNCE;
+  a.vy -= J/a.mass * ny * BOUNCE;
+  b.vx += J/b.mass * nx * BOUNCE;
+  b.vy += J/b.mass * ny * BOUNCE;
+
+  // Renk karışımı efekti
+  const mixHue = (a.hue + b.hue) / 2;
+  a.hue = a.hue * 0.95 + mixHue * 0.05;
+  b.hue = b.hue * 0.95 + mixHue * 0.05;
+}
+
+// ── Topları oluştur ───────────────────────────────────────────────────────────
+const balls = Array.from({length: BALL_COUNT}, () => new Ball());
+
+// ── Fare iticisi ──────────────────────────────────────────────────────────────
+function applyMouseForce() {
+  balls.forEach(ball => {
+    if (ball === dragBall) return;
+    const dx   = ball.x - mouseX;
+    const dy   = ball.y - mouseY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const repel = 120;
+
+    if (dist < repel && dist > 0) {
+      const force = (repel - dist) / repel;
+      ball.vx += (dx / dist) * force * 3;
+      ball.vy += (dy / dist) * force * 3;
+    }
+  });
+}
+
+// ── Çizim ─────────────────────────────────────────────────────────────────────
+let bgT = 0;
+function drawBackground() {
+  bgT += 0.002;
+  ctx.fillStyle = `rgba(6,6,16,0.15)`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Zemin çizgisi
+  ctx.save();
+  ctx.strokeStyle = 'rgba(124,106,247,0.15)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([10, 20]);
+  ctx.beginPath();
+  ctx.moveTo(0, H - 1); ctx.lineTo(W, H - 1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  drawBackground();
+
+  // Sürükleme güncelle
+  if (dragBall) {
+    dragBall.x  = mouseX;
+    dragBall.y  = mouseY;
+    dragBall.vx = 0;
+    dragBall.vy = 0;
+  } else {
+    applyMouseForce();
+  }
+
+  // Güncelle
+  balls.forEach(b => b.update());
+
+  // Çarpışma kontrol (O(n²) - top sayısı az olduğu için OK)
+  for (let i = 0; i < balls.length; i++) {
+    for (let j = i+1; j < balls.length; j++) {
+      resolveCollision(balls[i], balls[j]);
+    }
+  }
+
+  // Çiz
+  balls.forEach(b => b.draw());
+
+  // Fare çemberi
+  ctx.save();
+  ctx.strokeStyle = mouseDown ? 'rgba(124,106,247,.8)' : 'rgba(124,106,247,.3)';
+  ctx.lineWidth   = mouseDown ? 2 : 1;
+  ctx.beginPath();
+  ctx.arc(mouseX, mouseY, mouseDown ? 50 : 35, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ── Eventler ─────────────────────────────────────────────────────────────────
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX; mouseY = e.clientY;
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+});
+
+window.addEventListener('mousedown', e => {
+  mouseDown = true;
+  cursor.style.transform = 'translate(-50%,-50%) scale(0.7)';
+  // En yakın topu bul
+  let closest = null, minDist = 60;
+  balls.forEach(b => {
+    const d = Math.hypot(b.x - e.clientX, b.y - e.clientY);
+    if (d < b.r + 20 && d < minDist) { minDist = d; closest = b; }
+  });
+  dragBall = closest;
+});
+
+window.addEventListener('mouseup', () => {
+  mouseDown = false;
+  cursor.style.transform = 'translate(-50%,-50%) scale(1)';
+  if (dragBall) {
+    dragBall.vx = (Math.random()-0.5) * 5;
+    dragBall.vy = -3;
+  }
+  dragBall = null;
+});
+
+// Çift tıkla yeni top ekle
+window.addEventListener('dblclick', e => {
+  if (balls.length < 50) {
+    const b = new Ball();
+    b.x = e.clientX; b.y = e.clientY;
+    b.vx = (Math.random()-0.5)*10; b.vy = -5;
+    balls.push(b);
+  }
+});
+
+window.addEventListener('resize', () => {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+});
+
+loop();
+</script>
+</body>
+</html>

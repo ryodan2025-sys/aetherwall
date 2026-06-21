@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a0a3a"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7c6af7" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#7c6af7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wave1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c6af7"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="wave2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c6af7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Arka plan dairesi -->
+  <circle cx="128" cy="128" r="120" fill="url(#bg)" stroke="#7c6af7" stroke-width="2" stroke-opacity="0.4"/>
+
+  <!-- Glow efekti -->
+  <circle cx="128" cy="128" r="90" fill="url(#glow)"/>
+
+  <!-- Dalga çizgileri (ses görselleştirici hissi) -->
+  <!-- Çubuk 1 -->
+  <rect x="52" y="108" width="12" height="40" rx="6" fill="url(#wave2)" opacity="0.7"/>
+  <!-- Çubuk 2 -->
+  <rect x="70" y="90" width="12" height="76" rx="6" fill="url(#wave1)"/>
+  <!-- Çubuk 3 (merkez sol) -->
+  <rect x="88" y="78" width="12" height="100" rx="6" fill="url(#wave1)"/>
+  <!-- Çubuk 4 (merkez) -->
+  <rect x="106" y="64" width="16" height="128" rx="8" fill="url(#wave1)" opacity="1"/>
+  <!-- Çubuk 5 (merkez sağ) -->
+  <rect x="128" y="78" width="12" height="100" rx="6" fill="url(#wave1)"/>
+  <!-- Çubuk 6 -->
+  <rect x="146" y="90" width="12" height="76" rx="6" fill="url(#wave1)"/>
+  <!-- Çubuk 7 -->
+  <rect x="164" y="100" width="12" height="56" rx="6" fill="url(#wave2)" opacity="0.8"/>
+  <!-- Çubuk 8 -->
+  <rect x="182" y="112" width="12" height="32" rx="6" fill="url(#wave2)" opacity="0.6"/>
+
+  <!-- Parlayan nokta -->
+  <circle cx="114" cy="64" r="5" fill="#c4b5fd" opacity="0.9"/>
+
+  <!-- Dış çizgi halkası -->
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#a78bfa" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 8"/>
+</svg>
