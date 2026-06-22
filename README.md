@@ -1,107 +1,98 @@
 # 🌌 AetherWall
 
 **Windows için ücretsiz, açık kaynak canlı duvar kağıdı motoru.**
+**Free and open source live wallpaper engine for Windows.**
 
 Video, görsel, HTML/CSS/JS ve GLSL shader duvar kağıtlarını masaüstünüze sabitler.
-Kapalı kaynak alternatiflere bağımlı kalmadan, kodun her satırını görebileceğiniz
-bir alternatif.
+Pins video, image, HTML/CSS/JS and GLSL shader wallpapers to your desktop.
 
-> Kaynak kodu tamamen açık. Hiçbir telemetri, hiçbir gizli ağ isteği yok —
-> isteyen herkes `src/` klasörünü satır satır okuyabilir.
-
----
-
-## 📥 İndirme
-
-[**Releases**](../../releases) sayfasından son sürümü indirin:
-
-- **`AetherWall-Setup-x.x.x.exe`** — Kurulum sihirbazı (önerilen). Başlat menüsü kısayolu, otomatik güncelleme.
-
-### ⚠️ Windows SmartScreen Uyarısı Hakkında
-
-İlk çalıştırmada Windows **"Bilinmeyen Yayımcı"** uyarısı gösterebilir. Bu,
-uygulamanın henüz ücretli bir dijital imza sertifikasına sahip olmamasından
-kaynaklanır — **kötü amaçlı yazılım anlamına gelmez.**
-
-Devam etmek için: **Daha fazla bilgi → Yine de çalıştır**
-
-Bu projede güvendiğiniz tek şey bizim sözümüz olmak zorunda değil — kaynak kodu
-açık, isteyen herkes inceleyip kendi makinesinde derleyebilir
-(aşağıdaki [Kaynaktan Derleme](#-kaynaktan-derleme) bölümüne bakın).
+> Kaynak kodu tamamen açık. Hiçbir telemetri, hiçbir gizli ağ isteği yok.
+> Source code is fully open. No telemetry, no hidden network requests.
 
 ---
 
-## ✨ Özellikler
+## 📥 İndirme / Download
 
-- 🎬 **Video** (MP4, WebM), **Görsel** (JPG, PNG, GIF, WebP), **HTML/CSS/JS** ve **GLSL Shader** duvar kağıtları
-- 🎮 **Oyun Algılama** — bilinen oyun veya tam ekran uygulama açılınca otomatik duraklat (40+ oyun dahili tanımlı, özel ekleme desteklenir)
-- 🎨 **Windows Renk Uyumu** — duvar kağıdından dominant rengi çekip taskbar accent rengine uygular
-- 🌍 **Çoklu Dil** — Türkçe ve İngilizce arayüz
-- ⚡ **FPS Limiti** — 15 / 30 / 60 / Limitsiz
-- 🖥️ **Çoklu Monitör** — her ekrana farklı duvar kağıdı atayın
-- ☀️/🌙 **Açık/Koyu Tema**
-- 🔄 **Otomatik Güncelleme**
-- 📦 **Hafif** — gereksiz arka plan servisleri kapalı, debounce'lu disk yazımı, lazy thumbnail yükleme
+[**Releases**](../../releases) sayfasından son sürümü indirin.
+Download the latest version from the [**Releases**](../../releases) page.
+
+- **`AetherWall-Setup-x.x.x.exe`** — Kurulum sihirbazı, otomatik güncelleme / Installer, auto update
+- **`AetherWall-Portable-x.x.x.exe`** — Kurulum gerektirmez / No installation required
+
+### ⚠️ Windows SmartScreen Uyarısı / Warning
+
+İlk çalıştırmada **"Bilinmeyen Yayımcı"** uyarısı çıkabilir — kötü amaçlı yazılım değildir.
+You may see an **"Unknown Publisher"** warning on first run — this is not malware.
+
+**TR:** Daha fazla bilgi → Yine de çalıştır
+**EN:** More info → Run anyway
+
+Kaynak kodu açık, isteyen herkes inceleyebilir.
+Source code is open, anyone can review it.
 
 ---
 
-## 🛠️ Kaynaktan Derleme
+## ✨ Özellikler / Features
+
+- 🎬 **Video** (MP4, WebM), **Görsel / Image** (JPG, PNG, GIF, WebP), **HTML/CSS/JS**, **GLSL Shader**
+- 🎮 **Oyun Algılama / Game Detection** — oyun açılınca otomatik duraklat / auto pause on game launch (40+ games built-in)
+- 🎨 **Windows Renk Uyumu / Accent Sync** — duvar kağıdından renk çeker / extracts color from wallpaper
+- 🌍 **Çoklu Dil / Multi-language** — Türkçe & English
+- ⚡ **FPS Limiti / FPS Limit** — 15 / 30 / 60 / Limitsiz / Unlimited
+- 🖥️ **Çoklu Monitör / Multi-monitor** — her ekrana farklı wallpaper / different wallpaper per screen
+- ☀️/🌙 **Açık/Koyu Tema / Light/Dark Theme**
+- 🔄 **Otomatik Güncelleme / Auto Update**
+- 📦 **Hafif / Lightweight** — minimal background resource usage
+
+---
+
+## 🛠️ Kaynaktan Derleme / Build from Source
 
 ```bash
-git clone https://github.com/KULLANICI_ADIN/aetherwall.git
+git clone https://github.com/ryodan2025-sys/aetherwall.git
 cd aetherwall
 npm install
-npm start          # geliştirme modu
+npm start          # geliştirme modu / development mode
 ```
-
-Kendi `.exe`'nizi üretmek için:
 
 ```bash
-npm run build      # Windows installer + portable (.exe)
-npm run build:dir  # sadece klasör çıktısı (hızlı test için)
+npm run build      # Windows .exe üret / build Windows .exe
+npm run build:dir  # klasör çıktısı / directory output (faster)
 ```
 
-Çıktılar `dist/` klasöründe oluşur.
+---
+
+## 🤝 Katkıda Bulunma / Contributing
+
+PR'lar açık / PRs are welcome.
+Büyük değişiklikler için önce issue açın / For major changes, please open an issue first.
+Detaylar: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-## 🤝 Katkıda Bulunma
-
-PR'lar açık. Büyük değişiklikler öncesi bir issue açıp tartışmanızı öneririz.
-
----
-
-## 🏗️ Proje Yapısı
+## 🏗️ Proje Yapısı / Project Structure
 
 ```
 src/
   main/
-    index.js      — Ana süreç (pencereler, IPC, tray)
-    preload.js    — Güvenli köprü (contextBridge)
-    i18n.js       — Çeviri verileri
-    updater.js    — Otomatik güncelleme
+    index.js       — Ana süreç / Main process
+    preload.js     — Güvenli köprü / Secure bridge (contextBridge)
+    i18n.js        — Çeviriler / Translations
+    updater.js     — Otomatik güncelleme / Auto updater
   renderer/
-    ui.html       — Yönetim arayüzü (Dashboard, Kütüphane, Ayarlar)
-    wallpaper.html— Duvar kağıdı renderer
-  templates/      — Hazır interaktif şablonlar
-  settings/       — Ayar & kütüphane kalıcılığı (debounce'lu disk I/O)
-  workerw/        — Windows WorkerW masaüstü entegrasyonu
-  gamedetect/     — Oyun/tam ekran algılama
-  monitor/        — Çoklu monitör desteği
-assets/           — İkon ve installer kaynakları
+    ui.html        — Arayüz / UI (Dashboard, Library, Settings)
+    wallpaper.html — Wallpaper renderer
+  templates/       — Hazır şablonlar / Built-in templates
+  settings/        — Ayar kalıcılığı / Settings persistence
+  workerw/         — Windows WorkerW entegrasyonu / integration
+  gamedetect/      — Oyun algılama / Game detection
+  monitor/         — Çoklu monitör / Multi-monitor
+assets/            — İkonlar / Icons
 ```
 
-## 🔧 Teknik Notlar
+---
 
-- **WorkerW Yöntemi**: Duvar kağıdı penceresi `SetParent` ile WorkerW'e bağlanır;
-  masaüstü simgeleri ve görev çubuğu bunun üzerinde kalır.
-- **Güvenlik**: `contextIsolation: true`, `nodeIntegration: false`.
-  Renderer ile main süreç arası iletişim yalnızca preload köprüsü üzerinden.
-- **Koffi**: Windows API çağrıları için native FFI (koffi paketi).
-- **Performans**: Ayarlar in-memory cache + 300ms debounce ile disk'e yazılır;
-  oyun algılama tek PowerShell çağrısıyla çalışır (8sn aralık); thumbnail'lar
-  IntersectionObserver ile yalnızca görünür olduklarında render edilir.
+## 📄 Lisans / License
 
-## 📄 Lisans
-
-[MIT](LICENSE) — istediğiniz gibi kullanın, değiştirin, dağıtın.
+[MIT](LICENSE) — Özgürce kullanın, değiştirin, dağıtın.
+Free to use, modify and distribute.
