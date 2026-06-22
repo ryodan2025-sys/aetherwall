@@ -66,7 +66,7 @@ npm run build:dir  # klasör çıktısı / directory output (faster)
 
 PR'lar açık / PRs are welcome.
 Büyük değişiklikler için önce issue açın / For major changes, please open an issue first.
-Detaylar: [CONTRIBUTING.md](CONTRIBUTING.md)
+
 
 ---
 
