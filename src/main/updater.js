@@ -25,7 +25,7 @@ const { app, dialog, ipcMain } = require('electron');
 
 // ── Güncelleme sunucusu ───────────────────────────────────────────────────────
 // Örnek: 'https://raw.githubusercontent.com/KULLANICI/aetherwall-releases/main/version.json'
-const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/YOUR_USERNAME/aetherwall-releases/main/version.json';
+const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/ryodan2025-sys/aetherwall/main/version.json';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DOWNLOAD_DIR = path.join(os.tmpdir(), 'aetherwall-update');
