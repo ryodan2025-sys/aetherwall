@@ -6,12 +6,12 @@
   "author": "AetherWall Contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KULLANICI_ADIN/aetherwall.git"
+    "url": "git+https://github.com/ryodan2025-sys/aetherwall.git"
   },
   "bugs": {
-    "url": "https://github.com/KULLANICI_ADIN/aetherwall/issues"
+    "url": "https://github.com/ryodan2025-sys/aetherwall/issues"
   },
-  "homepage": "https://github.com/KULLANICI_ADIN/aetherwall#readme",
+  "homepage": "https://github.com/ryodan2025-sys/aetherwall#readme",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
