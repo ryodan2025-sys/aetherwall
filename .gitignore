@@ -28,6 +28,5 @@ supabase-*.sql
 {src/
 
 .env
-
 .env.local
 src/community/_secrets.generated.js
