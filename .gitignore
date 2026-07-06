@@ -27,4 +27,7 @@ supabase-*.sql
 # Kopyalama sırasında oluşmuş bozuk klasör
 {src/
 
-*.exe
+*..env
+
+.env.local
+src/community/_secrets.generated.js
